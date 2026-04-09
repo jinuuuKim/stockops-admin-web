@@ -1,7 +1,6 @@
 /**
  * Main layout component with sidebar navigation.
- * Provides consistent layout structure for authenticated pages.
- * Features collapsible sidebar with hamburger menu for mobile responsiveness.
+ * Enhanced with dark sidebar, warehouse selector, and notification bell.
  *
  * @author StockOps Team
  * @since 1.0
@@ -10,7 +9,10 @@
 import { useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { LayoutDashboard, Package, ArrowDownToLine, ArrowUpFromLine, MapPin, LogOut, Clock, Menu, X } from 'lucide-react'
+import { 
+  LayoutDashboard, Package, ArrowDownToLine, ArrowUpFromLine, 
+  MapPin, LogOut, Clock, Menu, X, Bell
+} from 'lucide-react'
 
 /**
  * Navigation item configuration.
@@ -25,76 +27,88 @@ interface NavItem {
  * Navigation menu items.
  */
 const navItems: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/inventory', label: 'Inventory', icon: Package },
-  { to: '/inbound', label: 'Inbound', icon: ArrowDownToLine },
-  { to: '/outbound', label: 'Outbound', icon: ArrowUpFromLine },
-  { to: '/locations', label: 'Locations', icon: MapPin },
-  { to: '/expiry', label: 'Expiry', icon: Clock },
+  { to: '/dashboard', label: '대시보드', icon: LayoutDashboard },
+  { to: '/inventory', label: '재고 관리', icon: Package },
+  { to: '/inbound', label: '입고 관리', icon: ArrowDownToLine },
+  { to: '/outbound', label: '출고 관리', icon: ArrowUpFromLine },
+  { to: '/locations', label: '위치 관리', icon: MapPin },
+  { to: '/expiry', label: '유통기한', icon: Clock },
 ]
 
 /**
- * Main layout with collapsible sidebar navigation and content area.
+ * Main layout with sidebar navigation and content area.
  * Uses React Router Outlet for nested routes.
- * Features hamburger menu toggle for mobile responsiveness.
  *
- * @returns Layout JSX element with collapsible sidebar and content area
+ * @returns Layout JSX element with sidebar and content area
  */
 export function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
-  const closeSidebar = () => setSidebarOpen(false)
+  const getPageTitle = () => {
+    const item = navItems.find(item => item.to === location.pathname)
+    return item?.label || 'StockOps'
+  }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Mobile overlay backdrop */}
+    <div className="min-h-screen flex bg-bg-secondary">
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={closeSidebar}
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-neutral-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        {/* Header with close button (mobile) */}
-        <div className="p-4 border-b border-neutral-700 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">StockOps</h1>
-            <p className="text-sm text-neutral-400">{user?.email}</p>
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-bg-dark text-white flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold">📦 StockOps</h1>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1 hover:bg-white/10 rounded"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
-          <button
-            onClick={closeSidebar}
-            className="lg:hidden p-2 hover:bg-neutral-800 rounded transition-colors"
-            aria-label="Close sidebar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          
+          {/* Warehouse Selector */}
+          <div className="mt-4">
+            <select className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm">
+              <option value="main">🏪 본점</option>
+              <option value="gangnam">🏪 강남점</option>
+              <option value="hongdae">🏪 홍대점</option>
+            </select>
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.to
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                onClick={closeSidebar}
-                className={`flex items-center gap-3 p-3 rounded mb-1 transition-colors ${
-                  isActive ? 'bg-primary-600 text-white' : 'hover:bg-neutral-800'
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
+                  isActive 
+                    ? 'bg-primary-600 text-white' 
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <item.icon className="w-5 h-5" />
@@ -104,37 +118,57 @@ export function MainLayout() {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-neutral-700">
-          <button
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-white/10">
+          <div className="flex items-center justify-between text-sm text-white/70 mb-3">
+            <span>{user?.email || 'admin@stockops.com'}</span>
+          </div>
+          <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 p-3 rounded hover:bg-neutral-800 w-full transition-colors"
+            className="flex items-center gap-2 p-2 rounded hover:bg-white/10 w-full text-white/70"
           >
-            <LogOut className="w-5 h-5" />
-            Logout
+            <LogOut className="w-4 h-4" />
+            로그아웃
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col min-h-screen lg:ml-0">
-        {/* Mobile header with hamburger menu */}
-        <header className="lg:hidden bg-white border-b border-neutral-200 p-4 flex items-center gap-4">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 hover:bg-neutral-100 rounded transition-colors"
-            aria-label="Open sidebar"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-semibold">StockOps</h1>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 hover:bg-neutral-100 rounded-lg"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-xl font-semibold text-text-primary">
+              {getPageTitle()}
+            </h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <button className="p-2 hover:bg-neutral-100 rounded-lg relative">
+              <Bell className="w-5 h-5 text-text-secondary" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:bg-neutral-100 rounded-lg"
+            >
+              <LogOut className="w-4 h-4" />
+              로그아웃
+            </button>
+          </div>
         </header>
 
-        {/* Content area */}
-        <div className="flex-1 p-8 bg-neutral-50 overflow-auto">
+        {/* Page Content */}
+        <main className="flex-1 p-6 overflow-auto">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

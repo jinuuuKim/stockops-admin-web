@@ -1,15 +1,20 @@
 /**
  * Dashboard page component.
  * Main landing page after login showing system overview.
+ * Redesigned to match web_proto with stats cards, alerts, and AI widget.
  *
  * @author StockOps Team
  * @since 1.0
  */
 
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useDashboardSummary, useDashboardTransactions } from '@/hooks/useDashboard'
-import { Link } from 'react-router-dom'
-import { Package, ArrowDownToLine, ArrowUpFromLine, AlertTriangle, Clock, TrendingUp, AlertCircle } from 'lucide-react'
+import { StatCard } from '@/components/ui/StatCard'
+import { AlertItem } from '@/components/ui/AlertItem'
+import { ActivityItem } from '@/components/ui/ActivityItem'
+import { AIBanner } from '@/components/ui/AIBanner'
+import { ArrowDownToLine, ArrowUpFromLine, Package, RefreshCw } from 'lucide-react'
 
 /**
  * Dashboard page displaying welcome message and system overview.
@@ -19,212 +24,144 @@ import { Package, ArrowDownToLine, ArrowUpFromLine, AlertTriangle, Clock, Trendi
  */
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
-  const { data: summary, isLoading: summaryLoading } = useDashboardSummary()
-  const { data: transactions, isLoading: transactionsLoading } = useDashboardTransactions(5)
-
-  const isLoading = summaryLoading || transactionsLoading
+  const { data: summary, isLoading, refetch } = useDashboardSummary()
+  const { data: transactions } = useDashboardTransactions(5)
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4 text-neutral-900">Dashboard</h1>
-      <p className="text-neutral-600 mb-6">
-        Welcome back, <span className="font-medium">{user?.name || 'User'}</span>!
-      </p>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <DashboardCard
-          title="Total Products"
-          value={summary?.totalProducts ?? 0}
-          icon={<Package className="w-6 h-6" />}
-          color="primary"
-          loading={isLoading}
-        />
-        <DashboardCard
-          title="Total Inventory"
-          value={summary?.totalInventoryQuantity ?? 0}
-          icon={<TrendingUp className="w-6 h-6" />}
-          color="primary"
-          loading={isLoading}
-        />
-        <DashboardCard
-          title="Today's Inbound"
-          value={summary?.todayInboundCount ?? 0}
-          icon={<ArrowDownToLine className="w-6 h-6" />}
-          color="success"
-          loading={isLoading}
-        />
-        <DashboardCard
-          title="Today's Outbound"
-          value={summary?.todayOutboundCount ?? 0}
-          icon={<ArrowUpFromLine className="w-6 h-6" />}
-          color="info"
-          loading={isLoading}
-        />
-        <DashboardCard
-          title="Low Stock Items"
-          value={summary?.lowStockCount ?? 0}
-          icon={<AlertTriangle className="w-6 h-6" />}
-          color="warning"
-          linkTo="/inventory?filter=low"
-          loading={isLoading}
-        />
-        <DashboardCard
-          title="Pending Cycle Counts"
-          value={summary?.pendingCycleCounts ?? 0}
-          icon={<Clock className="w-6 h-6" />}
-          color="neutral"
-          loading={isLoading}
-        />
-        <DashboardCard
-          title="Critical Expiry Alerts"
-          value={summary?.criticalExpiryCount ?? 0}
-          icon={<AlertCircle className="w-6 h-6" />}
-          color="error"
-          linkTo="/expiry?level=critical"
-          loading={isLoading}
-        />
-        <DashboardCard
-          title="Warning Expiry Alerts"
-          value={summary?.warningExpiryCount ?? 0}
-          icon={<AlertTriangle className="w-6 h-6" />}
-          color="warning"
-          loading={isLoading}
-        />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">대시보드</h1>
+          <p className="text-text-secondary mt-1">
+            안녕하세요, <span className="font-medium">{user?.name || '관리자'}</span>님! 
+            현재 시스템 현황을 확인하세요.
+          </p>
+        </div>
+        <button 
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          새로고침
+        </button>
       </div>
 
-      {/* Recent Transactions */}
-      <div className="bg-white p-6 rounded-lg shadow mb-8">
-        <h2 className="text-lg font-semibold mb-4 text-neutral-900">Recent Transactions</h2>
-        {isLoading ? (
-          <div className="text-neutral-500">Loading transactions...</div>
-        ) : transactions && transactions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-neutral-200">
-                  <th className="text-left py-2 px-3 text-sm font-medium text-neutral-500">Type</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-neutral-500">Product</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-neutral-500">Location</th>
-                  <th className="text-right py-2 px-3 text-sm font-medium text-neutral-500">Quantity</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-neutral-500">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx) => (
-                  <tr key={tx.id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                    <td className="py-2 px-3">
-                      <TransactionTypeBadge type={tx.type} />
-                    </td>
-                    <td className="py-2 px-3 text-neutral-900">{tx.productName}</td>
-                    <td className="py-2 px-3 text-neutral-600">{tx.locationCode}</td>
-                    <td className="py-2 px-3 text-right font-medium text-neutral-900">
-                      {tx.type === 'OUTBOUND' ? '-' : '+'}{tx.quantity}
-                    </td>
-                    <td className="py-2 px-3 text-neutral-500 text-sm">
-                      {new Date(tx.createdAt).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-neutral-500">No recent transactions</div>
-        )}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon="📦"
+          label="전체 품목"
+          value={summary?.totalProducts ?? 0}
+          variant="default"
+        />
+        <StatCard
+          icon="⚠️"
+          label="유통기한 임박"
+          value={summary?.criticalExpiryCount ?? 0}
+          change="3일 이내"
+          variant="warning"
+        />
+        <StatCard
+          icon="🌡️"
+          label="환경 상태"
+          value="정상"
+          change="4.2°C / 65%"
+          variant="success"
+        />
+        <StatCard
+          icon="📊"
+          label="오늘 입출고"
+          value={`${summary?.todayInboundCount ?? 0} / ${summary?.todayOutboundCount ?? 0}`}
+          change="입고 / 출고"
+          variant="default"
+        />
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4 text-neutral-900">Quick Actions</h2>
-        <div className="flex gap-4">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-200">
+        <h2 className="text-lg font-semibold mb-4 text-text-primary">빠른 작업</h2>
+        <div className="flex flex-wrap gap-3">
           <Link
             to="/inbound"
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
           >
             <ArrowDownToLine className="w-5 h-5" />
-            Create Inbound
+            입고 등록
           </Link>
           <Link
             to="/outbound"
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
           >
             <ArrowUpFromLine className="w-5 h-5" />
-            Create Outbound
+            출고 등록
           </Link>
           <Link
             to="/inventory"
-            className="flex items-center gap-2 px-4 py-2 bg-neutral-700 text-white rounded hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 text-text-primary border border-neutral-200 rounded-lg hover:bg-neutral-200 transition-colors font-medium"
           >
             <Package className="w-5 h-5" />
-            View Inventory
+            상품 등록
           </Link>
         </div>
       </div>
-    </div>
-  )
-}
 
-/**
- * Dashboard card component for displaying metrics.
- */
-interface DashboardCardProps {
-  title: string
-  value: number
-  icon: React.ReactNode
-  color: 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral'
-  linkTo?: string
-  loading?: boolean
-}
-
-function DashboardCard({ title, value, icon, color, linkTo, loading }: DashboardCardProps) {
-  const colorClasses = {
-    primary: 'text-primary-600 bg-primary-50',
-    success: 'text-success bg-green-50',
-    warning: 'text-warning bg-amber-50',
-    error: 'text-error bg-red-50',
-    info: 'text-info bg-blue-50',
-    neutral: 'text-neutral-600 bg-neutral-100',
-  }
-
-  const content = (
-    <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-medium text-neutral-500">{title}</h2>
-        <div className={`p-2 rounded ${colorClasses[color]}`}>
-          {icon}
+      {/* Alerts Section */}
+      {(summary?.criticalExpiryCount ?? 0) > 0 && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-200">
+          <h2 className="text-lg font-semibold mb-4 text-text-primary">⚠️ 주요 알림</h2>
+          <div className="space-y-3">
+            <AlertItem
+              type="danger"
+              icon="🔥"
+              title="유통기한 임박"
+              message={`${summary?.criticalExpiryCount}개 품목이 3일 이내에 만료됩니다`}
+              timestamp="5분 전"
+              actionLabel="확인하기"
+              onAction={() => {}}
+            />
+            {summary?.lowStockCount && summary.lowStockCount > 0 && (
+              <AlertItem
+                type="warning"
+                icon="📉"
+                title="재고 부족"
+                message={`${summary.lowStockCount}개 품목의 재고가 안전재고 이하입니다`}
+                timestamp="1시간 전"
+                actionLabel="확인하기"
+                onAction={() => {}}
+              />
+            )}
+          </div>
         </div>
-      </div>
-      {loading ? (
-        <div className="h-8 bg-neutral-200 rounded animate-pulse" />
-      ) : (
-        <p className="text-3xl font-bold text-neutral-900">{value.toLocaleString()}</p>
       )}
+
+      {/* AI Banner */}
+      <AIBanner
+        title="AI 추천"
+        description="다음 주 주말 매출 증가 예상 (15%). 생수, 과자류 안전재고를 늘리는 것을 추천합니다."
+        actionLabel="자동 발주"
+        onAction={() => {}}
+      />
+
+      {/* Recent Activity */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-200">
+        <h2 className="text-lg font-semibold mb-4 text-text-primary">최근 활동</h2>
+        {transactions && transactions.length > 0 ? (
+          <div className="space-y-2">
+            {transactions.slice(0, 5).map((tx) => (
+              <ActivityItem
+                key={tx.id}
+                time={new Date(tx.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                type={tx.type === 'INBOUND' ? 'inbound' : tx.type === 'OUTBOUND' ? 'outbound' : 'adjust'}
+                description={`${tx.productName} - ${tx.type === 'INBOUND' ? '+' : '-'}${tx.quantity}개`}
+                user={tx.createdBy?.toString() || '시스템'}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-text-secondary text-center py-8">최근 활동이 없습니다</p>
+        )}
+      </div>
     </div>
-  )
-
-  if (linkTo) {
-    return <Link to={linkTo}>{content}</Link>
-  }
-
-  return content
-}
-
-/**
- * Transaction type badge component.
- */
-function TransactionTypeBadge({ type }: { type: string }) {
-  const badges = {
-    INBOUND: { label: 'Inbound', className: 'bg-green-100 text-green-800' },
-    OUTBOUND: { label: 'Outbound', className: 'bg-blue-100 text-blue-800' },
-    ADJUSTMENT: { label: 'Adjustment', className: 'bg-amber-100 text-amber-800' },
-  }
-
-  const badge = badges[type as keyof typeof badges] || { label: type, className: 'bg-neutral-100 text-neutral-800' }
-
-  return (
-    <span className={`px-2 py-1 rounded text-xs font-medium ${badge.className}`}>
-      {badge.label}
-    </span>
   )
 }
