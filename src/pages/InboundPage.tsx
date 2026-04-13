@@ -8,11 +8,12 @@
 
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Plus, Eye, Check, Package } from 'lucide-react'
+import { Plus, Eye, Check, Package, ScanBarcode } from 'lucide-react'
 import { useInbounds, useInboundItems, useCreateInbound, useAddInboundItem, useConfirmInbound } from '@/hooks/useInbound'
 import { useProducts } from '@/hooks/useProduct'
 import { useLocations } from '@/hooks/useLocation'
 import { ProductSelectDropdown } from '@/components/products/ProductSelectDropdown'
+import { BarcodeScanner } from '@/components/common/BarcodeScanner'
 import type { Inbound, InboundStatus } from '@/types/inbound'
 import type { Location } from '@/types/location'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -378,6 +379,19 @@ function AddItemModal({ inboundId, onClose }: { inboundId: number; onClose: () =
   const [expiryDate, setExpiryDate] = useState('')
   const [quantity, setQuantity] = useState('')
   const [locationId, setLocationId] = useState('')
+  const [showScanner, setShowScanner] = useState(false)
+  const [scanError, setScanError] = useState('')
+
+  const handleBarcodeScan = (barcode: string) => {
+    const product = products?.find((p) => p.barcode === barcode)
+    if (product) {
+      setProductId(product.id)
+      setScanError('')
+      setShowScanner(false)
+    } else {
+      setScanError(`바코드 '${barcode}'에 해당하는 상품을 찾을 수 없습니다.`)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -405,18 +419,57 @@ function AddItemModal({ inboundId, onClose }: { inboundId: number; onClose: () =
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-neutral-900 mb-4">Add Item to Inbound</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-neutral-700 mb-1">Product</label>
-            <ProductSelectDropdown
-              value={productId}
-              onChange={setProductId}
-              products={products}
-              loading={productsLoading}
-              placeholder="상품명 또는 바코드로 검색"
-            />
+            {!showScanner ? (
+              <>
+                <ProductSelectDropdown
+                  value={productId}
+                  onChange={setProductId}
+                  products={products}
+                  loading={productsLoading}
+                  placeholder="상품명 또는 바코드로 검색"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="mt-2 flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700"
+                >
+                  <ScanBarcode className="w-4 h-4" />
+                  바코드 스캔
+                </button>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <BarcodeScanner
+                  onScan={handleBarcodeScan}
+                  placeholder="상품 바코드를 스캔하세요"
+                  onSuccess={() => setScanError('')}
+                  onError={(err) => setScanError(err)}
+                />
+                {scanError && (
+                  <p className="text-sm text-error">{scanError}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowScanner(false)
+                    setScanError('')
+                  }}
+                  className="text-sm text-neutral-600 hover:text-neutral-700"
+                >
+                  수동 선택으로 돌아가기
+                </button>
+              </div>
+            )}
+            {productId && !showScanner && products && (
+              <p className="mt-1 text-sm text-success">
+                선택됨: {products.find((p) => p.id === productId)?.name}
+              </p>
+            )}
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-neutral-700 mb-1">LOT Number</label>

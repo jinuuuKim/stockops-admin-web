@@ -8,11 +8,12 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Eye, CheckCircle, X, Package } from 'lucide-react'
+import { Plus, Eye, CheckCircle, X, Package, ScanBarcode } from 'lucide-react'
 import api from '@/lib/api'
 import type { OutboundDTO, OutboundItemDTO, OutboundStatus, CreateOutboundRequest, AddOutboundItemRequest } from '@/types/outbound'
 import type { ProductDTO } from '@/types/product'
 import { EmptyState } from '@/components/common/EmptyState'
+import { BarcodeScanner } from '@/components/common/BarcodeScanner'
 
 /**
  * Outbound management page with table, filtering, and CRUD operations.
@@ -187,6 +188,8 @@ function CreateOutboundModal({ onClose, onSuccess }: { onClose: () => void; onSu
   const [createdOutbound, setCreatedOutbound] = useState<OutboundDTO | null>(null)
   const [items, setItems] = useState<Array<{ productId: number; quantity: number; productName: string }>>([])
   const [error, setError] = useState('')
+  const [showScanner, setShowScanner] = useState(false)
+  const [scanError, setScanError] = useState('')
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -195,6 +198,24 @@ function CreateOutboundModal({ onClose, onSuccess }: { onClose: () => void; onSu
       return response.data.content || []
     },
   })
+
+  const handleBarcodeScan = (barcode: string) => {
+    const product = products.find((p) => p.barcode === barcode)
+    if (product) {
+      const select = document.getElementById('product-select') as HTMLSelectElement
+      const quantityInput = document.getElementById('quantity-input') as HTMLInputElement
+      if (select) {
+        select.value = String(product.id)
+      }
+      setScanError('')
+      setShowScanner(false)
+      if (quantityInput) {
+        quantityInput.focus()
+      }
+    } else {
+      setScanError(`바코드 '${barcode}'에 해당하는 상품을 찾을 수 없습니다.`)
+    }
+  }
 
   const createMutation = useMutation({
     mutationFn: async (request: CreateOutboundRequest) => {
@@ -328,17 +349,51 @@ function CreateOutboundModal({ onClose, onSuccess }: { onClose: () => void; onSu
 
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-neutral-700">Product</label>
-              <select
-                id="product-select"
-                className="w-full p-2 border border-neutral-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Select a product</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
+              {!showScanner ? (
+                <>
+                  <select
+                    id="product-select"
+                    className="w-full p-2 border border-neutral-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Select a product</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="mt-2 flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700"
+                  >
+                    <ScanBarcode className="w-4 h-4" />
+                    바코드 스캔
+                  </button>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <BarcodeScanner
+                    onScan={handleBarcodeScan}
+                    placeholder="상품 바코드를 스캔하세요"
+                    onSuccess={() => setScanError('')}
+                    onError={(err) => setScanError(err)}
+                  />
+                  {scanError && (
+                    <p className="text-sm text-error">{scanError}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowScanner(false)
+                      setScanError('')
+                    }}
+                    className="text-sm text-neutral-600 hover:text-neutral-700"
+                  >
+                    수동 선택으로 돌아가기
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mb-4">
