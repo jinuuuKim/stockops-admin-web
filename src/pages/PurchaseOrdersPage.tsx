@@ -10,7 +10,9 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ComponentType, FormEvent } from 'react'
 import axios from 'axios'
 import api from '@/lib/api'
-import { CheckCircle2, Clock3, Eye, PackageCheck, Plus, Send, Truck, X, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock3, Download, Eye, PackageCheck, Plus, Send, Truck, Upload, X, XCircle } from 'lucide-react'
+import { downloadExcelTemplate } from '@/api/excel'
+import { ExcelUploadModal } from '@/components/common/ExcelUploadModal'
 import { EmptyState } from '@/components/common/EmptyState'
 import { getErrorMessage, showErrorToast } from '@/lib/httpError'
 
@@ -359,6 +361,7 @@ export function PurchaseOrdersPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showExcelModal, setShowExcelModal] = useState(false)
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('details')
   const [isDetailLoading, setIsDetailLoading] = useState(false)
@@ -551,13 +554,29 @@ export function PurchaseOrdersPage() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">발주 관리</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
-        >
-          <Plus className="w-4 h-4" />
-          새 발주
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => void downloadExcelTemplate('purchase-orders')}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2 text-neutral-700 hover:bg-neutral-50"
+          >
+            <Download className="w-4 h-4" />
+            템플릿 다운로드
+          </button>
+          <button
+            onClick={() => setShowExcelModal(true)}
+            className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-primary-700 hover:bg-primary-100"
+          >
+            <Upload className="w-4 h-4" />
+            엑셀 업로드
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700"
+          >
+            <Plus className="w-4 h-4" />
+            새 발주
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -820,6 +839,14 @@ export function PurchaseOrdersPage() {
           </div>
         </div>
       )}
+
+      <ExcelUploadModal
+        isOpen={showExcelModal}
+        entityType="purchase-orders"
+        entityLabel="발주"
+        onClose={() => setShowExcelModal(false)}
+        onImported={fetchPurchaseOrders}
+      />
     </div>
   )
 }

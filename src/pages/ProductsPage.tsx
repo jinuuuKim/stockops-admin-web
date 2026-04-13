@@ -7,7 +7,9 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight, Download, Upload } from 'lucide-react'
+import { downloadExcelTemplate } from '@/api/excel'
+import { ExcelUploadModal } from '@/components/common/ExcelUploadModal'
 import { ProductModal } from '@/components/products/ProductModal'
 import type { ProductDTO, CreateProductRequest, UpdateProductRequest } from '@/types/product'
 import { getProducts, createProduct, updateProduct, deleteProduct } from '@/api/products'
@@ -17,6 +19,7 @@ export function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showExcelModal, setShowExcelModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<ProductDTO | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -128,13 +131,29 @@ export function ProductsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-neutral-900">상품 관리</h1>
-        <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          새 상품
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => void downloadExcelTemplate('products')}
+            className="flex items-center gap-2 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            템플릿 다운로드
+          </button>
+          <button
+            onClick={() => setShowExcelModal(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-primary-200 text-primary-700 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            엑셀 업로드
+          </button>
+          <button
+            onClick={handleOpenCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            새 상품
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
@@ -326,6 +345,13 @@ export function ProductsPage() {
         onSubmit={handleSubmit}
         product={editingProduct}
         isLoading={submitting}
+      />
+      <ExcelUploadModal
+        isOpen={showExcelModal}
+        entityType="products"
+        entityLabel="상품"
+        onClose={() => setShowExcelModal(false)}
+        onImported={fetchProducts}
       />
     </div>
   )

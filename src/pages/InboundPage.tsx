@@ -8,12 +8,14 @@
 
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Plus, Eye, Check, Package, ScanBarcode } from 'lucide-react'
+import { Plus, Eye, Check, Package, ScanBarcode, Download, Upload } from 'lucide-react'
 import { useInbounds, useInboundItems, useCreateInbound, useAddInboundItem, useConfirmInbound } from '@/hooks/useInbound'
 import { useProducts } from '@/hooks/useProduct'
 import { useLocations } from '@/hooks/useLocation'
 import { ProductSelectDropdown } from '@/components/products/ProductSelectDropdown'
 import { BarcodeScanner } from '@/components/common/BarcodeScanner'
+import { ExcelUploadModal } from '@/components/common/ExcelUploadModal'
+import { downloadExcelTemplate } from '@/api/excel'
 import type { Inbound, InboundStatus } from '@/types/inbound'
 import type { Location } from '@/types/location'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -24,11 +26,13 @@ import { EmptyState } from '@/components/common/EmptyState'
  * @returns Inbound page JSX element
  */
 export function InboundPage() {
+  const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<InboundStatus | ''>('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedInbound, setSelectedInbound] = useState<Inbound | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showAddItemModal, setShowAddItemModal] = useState(false)
+  const [showExcelModal, setShowExcelModal] = useState(false)
 
   const { data: inbounds, isLoading, error } = useInbounds(statusFilter || undefined)
 
@@ -52,13 +56,29 @@ export function InboundPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-neutral-900">Inbound Management</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          New Inbound
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => void downloadExcelTemplate('inbounds')}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2 text-neutral-700 hover:bg-neutral-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            템플릿 다운로드
+          </button>
+          <button
+            onClick={() => setShowExcelModal(true)}
+            className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-primary-700 hover:bg-primary-100 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            엑셀 업로드
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            New Inbound
+          </button>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -178,6 +198,14 @@ export function InboundPage() {
           }}
         />
       )}
+
+      <ExcelUploadModal
+        isOpen={showExcelModal}
+        entityType="inbounds"
+        entityLabel="입고"
+        onClose={() => setShowExcelModal(false)}
+        onImported={() => queryClient.invalidateQueries({ queryKey: ['inbounds'] })}
+      />
     </div>
   )
 }

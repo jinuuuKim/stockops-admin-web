@@ -11,9 +11,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { 
   LayoutDashboard, Package, ArrowDownToLine, ArrowUpFromLine, 
-  MapPin, LogOut, Clock, Bell, Settings,
+  MapPin, LogOut, Clock, Settings,
   Building2, Warehouse, Menu, X
 } from 'lucide-react'
 
@@ -232,10 +233,7 @@ export function MainLayout() {
           </div>
           
           <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-neutral-100 rounded-lg relative">
-              <Bell className="w-5 h-5 text-text-secondary" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <NotificationBell />
             <button 
               onClick={handleLogout}
               className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:bg-neutral-100 rounded-lg"
