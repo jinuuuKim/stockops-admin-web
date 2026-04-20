@@ -19,6 +19,7 @@ import { CentersPage } from '@/pages/CentersPage'
 import { WarehousesPage } from '@/pages/WarehousesPage'
 import { PurchaseOrdersPage } from '@/pages/PurchaseOrdersPage'
 import { ProductsPage } from '@/pages/ProductsPage'
+import { EnvironmentPage } from '@/pages/EnvironmentPage'
 import { MainLayout } from '@/components/MainLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
@@ -33,6 +34,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
  * - /locations: Locations page
  * - /expiry: Expiry management page
  * - /settings: Settings page
+ * - /environment: Environment monitoring page
  *
  * @returns App JSX element with router configuration
  */
@@ -61,6 +63,7 @@ function App() {
           <Route path="locations" element={<LocationsPage />} />
           <Route path="expiry" element={<ExpiryPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="environment" element={<EnvironmentPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
