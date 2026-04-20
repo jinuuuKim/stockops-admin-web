@@ -1184,5 +1184,22 @@ function formatReadingValue(value: number | null | undefined, unit: string | nul
     return '-'
   }
 
-  return `${value}${unit ?? ''}`
+  const symbol = getUnitSymbol(unit)
+  const fixed = Number(value.toFixed(2))
+  return `${fixed}${symbol}`
+}
+
+function getUnitSymbol(unit: string | null | undefined): string {
+  if (!unit) return ''
+
+  const u = unit.toLowerCase()
+
+  if (u === 'celsius' || u === '°c' || u === '℃') return '°C'
+  if (u === 'percent' || u === '%') return '%'
+  if (u === 'hpa') return ' hPa'
+  if (u === 'ug/m3' || u === 'μg/m³' || u === 'μg/m3') return ' μg/m³'
+  if (u === 'ppm') return ' ppm'
+  if (u === 'mg/m3' || u === 'mg/m³') return ' mg/m³'
+
+  return ` ${unit}`
 }

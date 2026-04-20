@@ -47,6 +47,7 @@ export function useEnvironmentDashboard(): UseQueryResult<DashboardResponse, Axi
     queryKey: ['environment', 'dashboard'],
     queryFn: getEnvironmentDashboard,
     staleTime: DASHBOARD_STALE_TIME,
+    refetchInterval: 10000,
   })
 }
 
