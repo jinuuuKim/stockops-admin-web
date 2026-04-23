@@ -22,6 +22,10 @@ import { ProductsPage } from '@/pages/ProductsPage'
 import { EnvironmentPage } from '@/pages/EnvironmentPage'
 import { ReportsPage } from '@/pages/ReportsPage'
 import { AIFeaturesPage } from '@/pages/AIFeaturesPage'
+import { AdminPage } from '@/pages/admin/AdminPage'
+import { NoticeManagement } from '@/pages/admin/NoticeManagement'
+import { AuditLogViewer } from '@/pages/admin/AuditLogViewer'
+import { DemandForecastPage } from '@/pages/DemandForecastPage'
 import { MainLayout } from '@/components/MainLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
@@ -68,6 +72,10 @@ function App() {
           <Route path="environment" element={<EnvironmentPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="ai" element={<AIFeaturesPage />} />
+          <Route path="admin" element={<AdminPage />} />
+          <Route path="admin/notices" element={<NoticeManagement />} />
+          <Route path="admin/audit-logs" element={<AuditLogViewer />} />
+          <Route path="demand-forecast" element={<DemandForecastPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

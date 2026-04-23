@@ -13,11 +13,12 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { 
-  LayoutDashboard, Package, ArrowDownToLine, ArrowUpFromLine, 
+import {
+  LayoutDashboard, Package, ArrowDownToLine, ArrowUpFromLine,
   MapPin, LogOut, Clock, Settings,
   Building2, Warehouse, Menu, X,
-  Thermometer, BarChart3, Brain
+  Thermometer, BarChart3, Brain,
+  Shield, Bell, FileText, TrendingUp
 } from 'lucide-react'
 
 interface NavItem {
@@ -197,8 +198,8 @@ export function MainLayout() {
                 key={item.to}
                 to={item.to}
                 className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
-                  isActive 
-                    ? 'bg-primary-600 text-white' 
+                  isActive
+                    ? 'bg-primary-600 text-white'
                     : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -207,6 +208,57 @@ export function MainLayout() {
               </Link>
             )
           })}
+
+          {user?.role === 'ADMIN' && (
+            <>
+              <div className="mt-4 pt-4 border-t border-white/10" />
+              <p className="px-3 text-xs text-white/40 uppercase tracking-wider mb-2">관리자</p>
+              <Link
+                to="/admin"
+                className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
+                  location.pathname === '/admin'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Shield className="w-5 h-5" />
+                관리자 대시보드
+              </Link>
+              <Link
+                to="/admin/notices"
+                className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
+                  location.pathname === '/admin/notices'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Bell className="w-5 h-5" />
+                공지 관리
+              </Link>
+              <Link
+                to="/admin/audit-logs"
+                className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
+                  location.pathname === '/admin/audit-logs'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <FileText className="w-5 h-5" />
+                감사 로그
+              </Link>
+              <Link
+                to="/demand-forecast"
+                className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
+                  location.pathname === '/demand-forecast'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <TrendingUp className="w-5 h-5" />
+                수요 예측
+              </Link>
+            </>
+          )}
         </nav>
 
         <div className="p-4 border-t border-white/10">

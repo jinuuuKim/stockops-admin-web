@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { X, Package, Barcode3, Tag, Scale, Calendar, DollarSign, Shield, Clock, Edit, Trash2 } from 'lucide-react'
+import { X, Package, Barcode, Tag, Scale, Calendar, DollarSign, Shield, Clock, Edit, Trash2 } from 'lucide-react'
 import type { ProductDTO } from '@/types/product'
 
 interface ProductDetailDrawerProps {
@@ -139,7 +139,7 @@ export function ProductDetailDrawer({ product, open, onClose, onEdit, onDelete }
 
         {/* Content */}
         <div className="overflow-y-auto h-[calc(100%-140px)] px-6 py-4">
-          <DetailRow icon={Barcode3} label="바코드" value={product.barcode} />
+          <DetailRow icon={Barcode} label="바코드" value={product.barcode} />
           <DetailRow icon={Tag} label="카테고리" value={product.category || '-'} />
           <DetailRow icon={Scale} label="단위" value={product.unit} />
           <DetailRow
