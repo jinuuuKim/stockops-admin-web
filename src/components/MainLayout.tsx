@@ -135,8 +135,8 @@ export function MainLayout() {
 
   // Close sidebar on route change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSidebarOpen(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
 
   const getPageTitle = () => {
@@ -160,7 +160,6 @@ export function MainLayout() {
         className={`fixed inset-y-0 left-0 w-64 bg-bg-dark text-white flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        role="navigation"
         aria-label="Main navigation"
         aria-hidden={!sidebarOpen}
       >
@@ -168,6 +167,7 @@ export function MainLayout() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">📦 StockOps</h1>
             <button
+              type="button"
               onClick={closeSidebar}
               className="p-2 hover:bg-white/10 rounded-lg lg:hidden"
               aria-label="Close sidebar"
@@ -265,7 +265,8 @@ export function MainLayout() {
           <div className="flex items-center justify-between text-sm text-white/70 mb-3">
             <span>{user?.email || 'admin@stockops.com'}</span>
           </div>
-          <button 
+          <button
+            type="button"
             onClick={handleLogout}
             className="flex items-center gap-2 p-2 rounded hover:bg-white/10 w-full text-white/70"
           >
@@ -279,6 +280,7 @@ export function MainLayout() {
         <header className="bg-white border-b border-neutral-200 px-4 lg:px-6 py-4 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button
+              type="button"
               ref={hamburgerRef}
               onClick={toggleSidebar}
               className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
@@ -295,7 +297,8 @@ export function MainLayout() {
           
           <div className="flex items-center gap-4">
             <NotificationBell />
-            <button 
+            <button
+              type="button"
               onClick={handleLogout}
               className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:bg-neutral-100 rounded-lg"
             >

@@ -113,8 +113,9 @@ export function NoticeManagement() {
             <h2 className="text-lg font-semibold mb-4">新規 공지 작성</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">제목</label>
+                <label htmlFor="notice-title" className="block text-sm font-medium text-neutral-700 mb-1">제목</label>
                 <input
+                  id="notice-title"
                   type="text"
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
@@ -122,8 +123,9 @@ export function NoticeManagement() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">내용</label>
+                <label htmlFor="notice-content" className="block text-sm font-medium text-neutral-700 mb-1">내용</label>
                 <textarea
+                  id="notice-content"
                   value={formData.content}
                   onChange={e => setFormData({ ...formData, content: e.target.value })}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-lg"
