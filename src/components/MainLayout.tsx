@@ -18,7 +18,8 @@ import {
   MapPin, LogOut, Clock, Settings,
   Building2, Warehouse, Menu, X,
   Thermometer, BarChart3, Brain,
-  Shield, Bell, FileText, TrendingUp, SlidersHorizontal, ClipboardList
+  Shield, Bell, FileText, TrendingUp, SlidersHorizontal, ClipboardList,
+  ShoppingCart
 } from 'lucide-react'
 
 interface NavItem {
@@ -39,7 +40,7 @@ const navItems: NavItem[] = [
   { to: '/inbound', label: '입고 관리', icon: ArrowDownToLine },
   { to: '/outbound', label: '출고 관리', icon: ArrowUpFromLine },
   { to: '/locations', label: '위치 관리', icon: MapPin },
-  { to: '/purchase-orders', label: '발주 관리', icon: Package },
+  { to: '/purchase-orders', label: '발주 관리', icon: ShoppingCart },
   { to: '/expiry', label: '유통기한', icon: Clock },
   { to: '/notifications', label: '알림 센터', icon: Bell },
   { to: '/reports', label: '리포트', icon: BarChart3 },

@@ -17,7 +17,7 @@ import { LocationsPage } from '@/pages/LocationsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { CentersPage } from '@/pages/CentersPage'
 import { WarehousesPage } from '@/pages/WarehousesPage'
-import { PurchaseOrdersPage } from '@/pages/PurchaseOrdersPage'
+import { PurchaseOrderPage } from '@/pages/PurchaseOrderPage'
 import { ProductsPage } from '@/pages/ProductsPage'
 import { EnvironmentPage } from '@/pages/EnvironmentPage'
 import { ReportsPage } from '@/pages/ReportsPage'
@@ -65,7 +65,7 @@ function App() {
           <Route path="centers" element={<CentersPage />} />
           <Route path="warehouses" element={<WarehousesPage />} />
           <Route path="products" element={<ProductsPage />} />
-          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrderPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="inbound" element={<InboundPage />} />
           <Route path="outbound" element={<OutboundPage />} />
