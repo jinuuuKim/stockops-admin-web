@@ -7,10 +7,11 @@
  */
 
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Eye, Send, PackagePlus, CheckCircle, XCircle, Truck, PackageCheck,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Split, ClipboardCheck, ArrowRight
 } from 'lucide-react'
 import {
   usePurchaseOrders,
@@ -23,6 +24,8 @@ import {
   useCancelPurchaseOrder,
   useCreateShipment,
   useCompletePurchaseOrder,
+  usePartialAcceptPurchaseOrder,
+  useReceivePurchaseOrderShipment,
 } from '@/hooks/usePurchaseOrder'
 import { useCenters } from '@/hooks/useCenter'
 import { useWarehousesByCenter } from '@/hooks/useWarehouse'
@@ -72,6 +75,11 @@ export function PurchaseOrderPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [detailModalForm, setDetailModalForm] = useState<'none' | 'partialAccept' | 'receive'>('none')
+  const [showPartialAcceptModal, setShowPartialAcceptModal] = useState(false)
+  const [partialAcceptQuantities, setPartialAcceptQuantities] = useState<Record<number, string>>({})
+  const [showReceiveShipmentModal, setShowReceiveShipmentModal] = useState(false)
+  const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(0)
   const pageSize = 10
 
@@ -82,6 +90,8 @@ export function PurchaseOrderPage() {
   const rejectMutation = useRejectPurchaseOrder()
   const cancelMutation = useCancelPurchaseOrder()
   const completeMutation = useCompletePurchaseOrder()
+  const partialAcceptMutation = usePartialAcceptPurchaseOrder()
+  const receiveShipmentMutation = useReceivePurchaseOrderShipment()
 
   const paginatedPurchaseOrders = useMemo(() => {
     const start = currentPage * pageSize
@@ -202,6 +212,7 @@ export function PurchaseOrderPage() {
                         type="button"
                         onClick={() => {
                           setSelectedPO(po)
+                          setDetailModalForm('none')
                           setShowDetailModal(true)
                         }}
                         className="text-primary-600 hover:text-primary-700"
@@ -215,6 +226,7 @@ export function PurchaseOrderPage() {
                             type="button"
                             onClick={() => {
                               setSelectedPO(po)
+                              setDetailModalForm('none')
                               setShowDetailModal(true)
                             }}
                             className="text-primary-600 hover:text-primary-700"
@@ -246,6 +258,19 @@ export function PurchaseOrderPage() {
                           </button>
                           <button
                             type="button"
+                            onClick={() => {
+                              setSelectedPO(po)
+                              setPartialAcceptQuantities({})
+                              setShowPartialAcceptModal(true)
+                            }}
+                            disabled={partialAcceptMutation.isPending}
+                            className="text-amber-600 hover:text-amber-700 disabled:opacity-50"
+                            title="부분 수락"
+                          >
+                            <Split className="w-5 h-5" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleReject(po)}
                             disabled={rejectMutation.isPending}
                             className="text-red-600 hover:text-red-700 disabled:opacity-50"
@@ -265,28 +290,61 @@ export function PurchaseOrderPage() {
                         </>
                       )}
                       {(po.status === 'ACCEPTED' || po.status === 'PARTIALLY_ACCEPTED') && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPO(po)
-                            setShowDetailModal(true)
-                          }}
-                          className="text-violet-600 hover:text-violet-700"
-                          title="발송 등록"
-                        >
-                          <Truck className="w-5 h-5" />
-                        </button>
+                        <>
+                          {po.shipments && po.shipments.some((s) => s.status !== 'DELIVERED') && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedPO(po)
+                                setDetailModalForm('receive')
+                                setShowDetailModal(true)
+                              }}
+                              disabled={receiveShipmentMutation.isPending}
+                              className="text-cyan-600 hover:text-cyan-700 disabled:opacity-50"
+                              title="발송 접수"
+                            >
+                              <ClipboardCheck className="w-5 h-5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPO(po)
+                              setDetailModalForm('none')
+                              setShowDetailModal(true)
+                            }}
+                            className="text-violet-600 hover:text-violet-700"
+                            title="발송 등록"
+                          >
+                            <Truck className="w-5 h-5" />
+                          </button>
+                        </>
                       )}
                       {po.status === 'SHIPMENT_CREATED' && (
-                        <button
-                          type="button"
-                          onClick={() => handleComplete(po)}
-                          disabled={completeMutation.isPending}
-                          className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
-                          title="완료"
-                        >
-                          <PackageCheck className="w-5 h-5" />
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPO(po)
+                              setSelectedShipmentId(null)
+                              setShowReceiveShipmentModal(true)
+                            }}
+                            disabled={receiveShipmentMutation.isPending}
+                            className="text-cyan-600 hover:text-cyan-700 disabled:opacity-50"
+                            title="입고 접수"
+                          >
+                            <PackageCheck className="w-5 h-5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleComplete(po)}
+                            disabled={completeMutation.isPending}
+                            className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                            title="완료"
+                          >
+                            <PackageCheck className="w-5 h-5" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -358,9 +416,37 @@ export function PurchaseOrderPage() {
       {showDetailModal && selectedPO && (
         <PurchaseOrderDetailModal
           purchaseOrder={selectedPO}
+          initialForm={detailModalForm}
           onClose={() => {
             setShowDetailModal(false)
             setSelectedPO(null)
+            setDetailModalForm('none')
+          }}
+        />
+      )}
+
+      {showPartialAcceptModal && selectedPO && (
+        <PartialAcceptModal
+          purchaseOrder={selectedPO}
+          quantities={partialAcceptQuantities}
+          onQuantitiesChange={setPartialAcceptQuantities}
+          onClose={() => {
+            setShowPartialAcceptModal(false)
+            setSelectedPO(null)
+            setPartialAcceptQuantities({})
+          }}
+        />
+      )}
+
+      {showReceiveShipmentModal && selectedPO && (
+        <ReceiveShipmentModal
+          purchaseOrder={selectedPO}
+          selectedShipmentId={selectedShipmentId}
+          onSelectedShipmentIdChange={setSelectedShipmentId}
+          onClose={() => {
+            setShowReceiveShipmentModal(false)
+            setSelectedPO(null)
+            setSelectedShipmentId(null)
           }}
         />
       )}
@@ -466,17 +552,104 @@ function CreatePurchaseOrderModal({ onClose }: { onClose: () => void }) {
 }
 
 /**
+ * Renders a visual status flow timeline for purchase orders.
+ *
+ * @param status - Current purchase order status
+ * @returns Timeline JSX element
+ */
+function StatusFlowTimeline({ status }: { status: PurchaseOrderStatus }) {
+  const flow: PurchaseOrderStatus[] = [
+    'DRAFT',
+    'REQUESTED',
+    'ACCEPTED',
+    'SHIPMENT_CREATED',
+    'INBOUND_PENDING',
+    'COMPLETED',
+  ]
+
+  const terminalStatuses: PurchaseOrderStatus[] = ['REJECTED', 'CANCELLED']
+  const isTerminal = terminalStatuses.includes(status)
+
+  const getStepIndex = (s: PurchaseOrderStatus) => {
+    if (s === 'PARTIALLY_ACCEPTED') return flow.indexOf('ACCEPTED')
+    return flow.indexOf(s)
+  }
+
+  const currentIndex = getStepIndex(status)
+
+  const stepLabel = (s: PurchaseOrderStatus) => {
+    if (s === 'ACCEPTED') return '수락'
+    return STATUS_LABELS[s]
+  }
+
+  const stepStyle = (s: PurchaseOrderStatus, index: number) => {
+    if (status === s || (s === 'ACCEPTED' && status === 'PARTIALLY_ACCEPTED')) {
+      return 'bg-primary-600 text-white border-primary-600'
+    }
+    if (index < currentIndex) {
+      return 'bg-emerald-100 text-emerald-700 border-emerald-300'
+    }
+    return 'bg-neutral-100 text-neutral-400 border-neutral-200'
+  }
+
+  if (isTerminal) {
+    return (
+      <div className="mb-6 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+        <h3 className="font-medium text-neutral-900 mb-3">상태 흐름</h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-neutral-100 text-neutral-500 border-neutral-200">
+            {STATUS_LABELS[status]}
+          </span>
+          <span className="text-sm text-neutral-500">종료된 발주입니다</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-6 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+      <h3 className="font-medium text-neutral-900 mb-3">상태 흐름</h3>
+      <div className="flex items-center gap-1 overflow-x-auto">
+        {flow.map((s, index) => (
+          <div key={s} className="flex items-center shrink-0">
+            <span
+              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${stepStyle(s, index)}`}
+            >
+              {stepLabel(s)}
+            </span>
+            {index < flow.length - 1 && (
+              <ArrowRight className="w-3 h-3 text-neutral-300 mx-1" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
  * Purchase order detail modal component.
  *
  * @param purchaseOrder - Purchase order data
+ * @param initialForm - Initial active form when modal opens
  * @param onClose - Close callback
  * @returns Modal JSX element
  */
-function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: PurchaseOrder; onClose: () => void }) {
+function PurchaseOrderDetailModal({
+  purchaseOrder,
+  initialForm,
+  onClose,
+}: {
+  purchaseOrder: PurchaseOrder
+  initialForm: 'none' | 'partialAccept' | 'receive'
+  onClose: () => void
+}) {
   const { data: detail, isLoading } = usePurchaseOrderById(purchaseOrder.id)
   const { data: products } = useProducts()
 
-  const [activeForm, setActiveForm] = useState<'none' | 'item' | 'accept' | 'reject' | 'cancel' | 'shipment'>('none')
+  const [activeForm, setActiveForm] = useState<
+    'none' | 'item' | 'accept' | 'reject' | 'cancel' | 'shipment' | 'partialAccept' | 'receive'
+  >(initialForm)
   const [productId, setProductId] = useState<number | null>(null)
   const [quantity, setQuantity] = useState('')
   const [erpReference, setErpReference] = useState('')
@@ -484,6 +657,8 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
   const [shipmentNumber, setShipmentNumber] = useState('')
   const [carrier, setCarrier] = useState('')
   const [trackingNumber, setTrackingNumber] = useState('')
+  const [partialQuantities, setPartialQuantities] = useState<Record<number, string>>({})
+  const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null)
 
   const addItemMutation = useAddPurchaseOrderItem(purchaseOrder.id)
   const submitMutation = useSubmitPurchaseOrder()
@@ -492,6 +667,8 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
   const cancelMutation = useCancelPurchaseOrder()
   const createShipmentMutation = useCreateShipment()
   const completeMutation = useCompletePurchaseOrder()
+  const partialAcceptMutation = usePartialAcceptPurchaseOrder()
+  const receiveShipmentMutation = useReceivePurchaseOrderShipment()
 
   const po = detail ?? purchaseOrder
 
@@ -559,13 +736,54 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
     completeMutation.mutate(po.id)
   }
 
+  const handlePartialAccept = (e: React.FormEvent) => {
+    e.preventDefault()
+    const items = po.items
+      .map((item) => ({
+        poItemId: item.id,
+        acceptedQuantity: Number(partialQuantities[item.id] ?? item.requestedQuantity),
+      }))
+      .filter((item) => !Number.isNaN(item.acceptedQuantity))
+
+    if (items.length === 0) return
+
+    partialAcceptMutation.mutate(
+      { id: po.id, items },
+      {
+        onSuccess: () => {
+          setPartialQuantities({})
+          setActiveForm('none')
+        },
+      }
+    )
+  }
+
+  const handleReceiveShipment = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedShipmentId) return
+
+    receiveShipmentMutation.mutate(
+      { id: po.id, shipmentId: selectedShipmentId },
+      {
+        onSuccess: () => {
+          setSelectedShipmentId(null)
+          setActiveForm('none')
+        },
+      }
+    )
+  }
+
   const isActionPending =
     submitMutation.isPending ||
     acceptMutation.isPending ||
     rejectMutation.isPending ||
     cancelMutation.isPending ||
     createShipmentMutation.isPending ||
-    completeMutation.isPending
+    completeMutation.isPending ||
+    partialAcceptMutation.isPending ||
+    receiveShipmentMutation.isPending
+
+  const undeliveredShipments = po.shipments?.filter((s) => s.status !== 'DELIVERED') ?? []
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -621,6 +839,8 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
             </div>
           )}
         </div>
+
+        <StatusFlowTimeline status={po.status} />
 
         {/* Status-specific actions */}
         {po.status === 'DRAFT' && (
@@ -684,6 +904,14 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
               </button>
               <button
                 type="button"
+                onClick={() => setActiveForm(activeForm === 'partialAccept' ? 'none' : 'partialAccept')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 text-sm font-medium"
+              >
+                <Split className="w-4 h-4" />
+                부분 수락
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveForm(activeForm === 'reject' ? 'none' : 'reject')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-medium"
               >
@@ -719,6 +947,40 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
                   className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {acceptMutation.isPending ? '처리 중...' : '수락'}
+                </button>
+              </form>
+            )}
+
+            {activeForm === 'partialAccept' && (
+              <form onSubmit={handlePartialAccept} className="space-y-3">
+                <p className="text-sm text-neutral-600">각 품목의 수락 수량을 입력하세요. 요청 수량 이하로 설정할 수 있습니다.</p>
+                <div className="space-y-2">
+                  {po.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3">
+                      <span className="text-sm text-neutral-900 w-32 truncate">{item.product.name}</span>
+                      <span className="text-xs text-neutral-500">요청: {item.requestedQuantity}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={item.requestedQuantity}
+                        value={partialQuantities[item.id] ?? item.requestedQuantity}
+                        onChange={(e) =>
+                          setPartialQuantities((prev) => ({
+                            ...prev,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                        className="w-24 px-2 py-1 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  disabled={partialAcceptMutation.isPending || po.items.length === 0}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {partialAcceptMutation.isPending ? '처리 중...' : '부분 수락 적용'}
                 </button>
               </form>
             )}
@@ -819,6 +1081,59 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
                 </button>
               </div>
             </form>
+
+            {undeliveredShipments.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-neutral-200">
+                <button
+                  type="button"
+                  onClick={() => setActiveForm(activeForm === 'receive' ? 'none' : 'receive')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 text-sm font-medium"
+                >
+                  <ClipboardCheck className="w-4 h-4" />
+                  발송 접수
+                </button>
+
+                {activeForm === 'receive' && (
+                  <form onSubmit={handleReceiveShipment} className="mt-3 space-y-3">
+                    <p className="text-sm text-neutral-600">접수할 발송을 선택하세요.</p>
+                    <div className="space-y-2">
+                      {undeliveredShipments.map((shipment) => (
+                        <label
+                          key={shipment.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            selectedShipmentId === shipment.id
+                              ? 'border-cyan-400 bg-cyan-50'
+                              : 'border-neutral-200 hover:bg-neutral-100'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="shipment"
+                            value={shipment.id}
+                            checked={selectedShipmentId === shipment.id}
+                            onChange={() => setSelectedShipmentId(shipment.id)}
+                            className="text-cyan-600 focus:ring-cyan-500"
+                          />
+                          <div className="text-sm">
+                            <div className="font-medium text-neutral-900">{shipment.shipmentNumber}</div>
+                            <div className="text-neutral-500">
+                              {shipment.carrier || '-'} / {shipment.trackingNumber || '-'}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={receiveShipmentMutation.isPending || !selectedShipmentId}
+                      className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
+                    >
+                      {receiveShipmentMutation.isPending ? '처리 중...' : '발송 접수'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -833,6 +1148,33 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
             >
               {completeMutation.isPending ? '처리 중...' : '완료 처리'}
             </button>
+          </div>
+        )}
+
+        {/* Inbound linkage */}
+        {(po.status === 'COMPLETED' || po.status === 'INBOUND_PENDING') && (
+          <div className="mb-6 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+            <h3 className="font-medium text-neutral-900 mb-3">입고 연결</h3>
+            {po.inboundIds && po.inboundIds.length > 0 ? (
+              <div className="space-y-2">
+                {po.inboundIds.map((inboundId) => (
+                  <Link
+                    key={inboundId}
+                    to="/inbound"
+                    className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                    입고 #{inboundId} 보기
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-600">
+                {po.status === 'COMPLETED'
+                  ? '입고가 완료되었습니다.'
+                  : '입고 처리 대기 중입니다.'}
+              </p>
+            )}
           </div>
         )}
 
@@ -901,6 +1243,200 @@ function PurchaseOrderDetailModal({ purchaseOrder, onClose }: { purchaseOrder: P
             닫기
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Partial accept modal component.
+ *
+ * @param purchaseOrder - Purchase order data
+ * @param quantities - Map of itemId to accepted quantity string
+ * @param onQuantitiesChange - Quantities change callback
+ * @param onClose - Close callback
+ * @returns Modal JSX element
+ */
+function PartialAcceptModal({
+  purchaseOrder,
+  quantities,
+  onQuantitiesChange,
+  onClose,
+}: {
+  purchaseOrder: PurchaseOrder
+  quantities: Record<number, string>
+  onQuantitiesChange: (q: Record<number, string>) => void
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const partialAcceptMutation = usePartialAcceptPurchaseOrder()
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const items = purchaseOrder.items
+      .map((item) => ({
+        poItemId: item.id,
+        acceptedQuantity: Number(quantities[item.id] ?? item.requestedQuantity),
+      }))
+      .filter((item) => !Number.isNaN(item.acceptedQuantity))
+
+    if (items.length === 0) return
+
+    partialAcceptMutation.mutate(
+      { id: purchaseOrder.id, items },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+          onClose()
+        },
+      }
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-neutral-900">부분 수락</h2>
+          <button onClick={onClose} type="button" className="text-neutral-500 hover:text-neutral-700">
+            &times;
+          </button>
+        </div>
+        <p className="text-sm text-neutral-600 mb-4">각 품목의 수락 수량을 입력하세요. 요청 수량 이하로 설정할 수 있습니다.</p>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {purchaseOrder.items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3">
+              <span className="text-sm text-neutral-900 w-32 truncate">{item.product.name}</span>
+              <span className="text-xs text-neutral-500">요청: {item.requestedQuantity}</span>
+              <input
+                type="number"
+                min="0"
+                max={item.requestedQuantity}
+                value={quantities[item.id] ?? item.requestedQuantity}
+                onChange={(e) => onQuantitiesChange({ ...quantities, [item.id]: e.target.value })}
+                className="w-24 px-2 py-1 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              />
+            </div>
+          ))}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-neutral-600 hover:text-neutral-700"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={partialAcceptMutation.isPending || purchaseOrder.items.length === 0}
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+            >
+              {partialAcceptMutation.isPending ? '처리 중...' : '부분 수락 적용'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Receive shipment modal component.
+ *
+ * @param purchaseOrder - Purchase order data
+ * @param selectedShipmentId - Selected shipment ID
+ * @param onSelectedShipmentIdChange - Selected shipment change callback
+ * @param onClose - Close callback
+ * @returns Modal JSX element
+ */
+function ReceiveShipmentModal({
+  purchaseOrder,
+  selectedShipmentId,
+  onSelectedShipmentIdChange,
+  onClose,
+}: {
+  purchaseOrder: PurchaseOrder
+  selectedShipmentId: number | null
+  onSelectedShipmentIdChange: (id: number | null) => void
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const receiveShipmentMutation = useReceivePurchaseOrderShipment()
+
+  const undeliveredShipments = purchaseOrder.shipments?.filter((s) => s.status !== 'DELIVERED') ?? []
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedShipmentId) return
+
+    receiveShipmentMutation.mutate(
+      { id: purchaseOrder.id, shipmentId: selectedShipmentId },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+          onClose()
+        },
+      }
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-neutral-900">입고 접수</h2>
+          <button onClick={onClose} type="button" className="text-neutral-500 hover:text-neutral-700">
+            &times;
+          </button>
+        </div>
+        <p className="text-sm text-neutral-600 mb-4">접수할 발송을 선택하세요.</p>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {undeliveredShipments.length > 0 ? (
+            undeliveredShipments.map((shipment) => (
+              <label
+                key={shipment.id}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedShipmentId === shipment.id
+                    ? 'border-cyan-400 bg-cyan-50'
+                    : 'border-neutral-200 hover:bg-neutral-100'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="shipment"
+                  value={shipment.id}
+                  checked={selectedShipmentId === shipment.id}
+                  onChange={() => onSelectedShipmentIdChange(shipment.id)}
+                  className="text-cyan-600 focus:ring-cyan-500"
+                />
+                <div className="text-sm">
+                  <div className="font-medium text-neutral-900">{shipment.shipmentNumber}</div>
+                  <div className="text-neutral-500">
+                    {shipment.carrier || '-'} / {shipment.trackingNumber || '-'}
+                  </div>
+                </div>
+              </label>
+            ))
+          ) : (
+            <p className="text-sm text-neutral-500">접수 가능한 발송이 없습니다.</p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-neutral-600 hover:text-neutral-700"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={receiveShipmentMutation.isPending || !selectedShipmentId || undeliveredShipments.length === 0}
+              className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
+            >
+              {receiveShipmentMutation.isPending ? '처리 중...' : '입고 접수'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
