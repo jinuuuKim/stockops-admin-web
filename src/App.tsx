@@ -29,6 +29,7 @@ import { AuditLogViewer } from '@/pages/admin/AuditLogViewer'
 import { DemandForecastPage } from '@/pages/DemandForecastPage'
 import { CycleCountPage } from '@/pages/CycleCountPage'
 import { NotificationsPage } from '@/pages/NotificationsPage'
+import { InventoryTransferPage } from '@/pages/InventoryTransferPage'
 import { MainLayout } from '@/components/MainLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
@@ -80,6 +81,7 @@ function App() {
           <Route path="admin/notices" element={<NoticeManagement />} />
           <Route path="admin/audit-logs" element={<AuditLogViewer />} />
           <Route path="demand-forecast" element={<DemandForecastPage />} />
+          <Route path="inventory-transfers" element={<InventoryTransferPage />} />
           <Route path="cycle-counts" element={<CycleCountPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
         </Route>

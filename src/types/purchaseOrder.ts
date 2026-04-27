@@ -81,6 +81,7 @@ export interface PurchaseOrder {
   notes: string | null
   items: PurchaseOrderItem[]
   shipments: PurchaseOrderShipment[]
+  inboundIds?: number[]
   createdAt: string
   updatedAt: string
 }
@@ -132,4 +133,28 @@ export interface RejectPurchaseOrderRequest {
 export interface CancelPurchaseOrderRequest {
   id: number
   reason: string
+}
+
+/**
+ * Partial acceptance item payload.
+ */
+export interface PartialAcceptItem {
+  poItemId: number
+  acceptedQuantity: number
+}
+
+/**
+ * Partial accept purchase order request payload.
+ */
+export interface PartialAcceptRequest {
+  id: number
+  items: PartialAcceptItem[]
+}
+
+/**
+ * Receive shipment request payload.
+ */
+export interface ReceiveShipmentRequest {
+  id: number
+  shipmentId: number
 }

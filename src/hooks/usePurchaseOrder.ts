@@ -20,6 +20,8 @@ import type {
   AcceptPurchaseOrderRequest,
   RejectPurchaseOrderRequest,
   CancelPurchaseOrderRequest,
+  PartialAcceptRequest,
+  ReceiveShipmentRequest,
 } from '@/types/purchaseOrder'
 
 /**
@@ -232,6 +234,62 @@ export function useCreateShipment(): UseMutationResult<
   return useMutation({
     mutationFn: async ({ id, request }: { id: number; request: CreateShipmentRequest }) => {
       const response = await api.post<PurchaseOrderShipment>(`/v1/purchase-orders/${id}/shipments`, request)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrder'] })
+    },
+  })
+}
+
+/**
+ * Partially accepts a purchase order with per-item quantities.
+ *
+ * @returns Mutation result for partial acceptance
+ * @example
+ * const partialAcceptMutation = usePartialAcceptPurchaseOrder()
+ * partialAcceptMutation.mutate({ id: 1, items: [{ poItemId: 1, acceptedQuantity: 50 }] })
+ */
+export function usePartialAcceptPurchaseOrder(): UseMutationResult<
+  PurchaseOrder,
+  AxiosError,
+  PartialAcceptRequest
+> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, items }: PartialAcceptRequest) => {
+      const response = await api.post<PurchaseOrder>(`/v1/purchase-orders/${id}/partial-accept`, {
+        items,
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] })
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrder'] })
+    },
+  })
+}
+
+/**
+ * Receives a shipment for a purchase order.
+ *
+ * @returns Mutation result for receiving shipment
+ * @example
+ * const receiveMutation = useReceivePurchaseOrderShipment()
+ * receiveMutation.mutate({ id: 1, shipmentId: 2 })
+ */
+export function useReceivePurchaseOrderShipment(): UseMutationResult<
+  PurchaseOrder,
+  AxiosError,
+  ReceiveShipmentRequest
+> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, shipmentId }: ReceiveShipmentRequest) => {
+      const response = await api.post<PurchaseOrder>(`/v1/purchase-orders/${id}/receive`, null, {
+        params: { shipmentId },
+      })
       return response.data
     },
     onSuccess: () => {

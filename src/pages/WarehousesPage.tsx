@@ -1,16 +1,18 @@
 /**
  * Warehouses management page.
- * Provides CRUD operations for warehouses within a center.
+ * Provides CRUD operations for warehouses within a center,
+ * including warehouse closure with precondition checks.
  *
  * @author StockOps Team
  * @since 2.0
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import api from '@/lib/api'
-import { Plus, Edit, Trash2, Building2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Edit, Trash2, Building2, ChevronLeft, ChevronRight, Lock, AlertCircle } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { useCanCloseWarehouse, useCloseWarehouse } from '@/hooks/useWarehouse'
 
 interface Center {
   id: number
@@ -27,6 +29,8 @@ interface WarehouseItem {
   status: string
   center?: Center
   centerId?: number
+  closureReason?: string
+  closedAt?: string
 }
 
 export function WarehousesPage() {
@@ -46,22 +50,23 @@ export function WarehousesPage() {
     phone: '',
     centerId: '',
   })
+  const [closeTargetId, setCloseTargetId] = useState<number | null>(null)
+  const [closeReason, setCloseReason] = useState('')
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [showCloseBlock, setShowCloseBlock] = useState(false)
+  const { data: canCloseData, isLoading: canCloseLoading } = useCanCloseWarehouse(closeTargetId)
+  const closeMutation = useCloseWarehouse()
 
-  useEffect(() => {
-    fetchCenters()
-    fetchWarehouses()
-  }, [])
-
-  const fetchCenters = async () => {
+  const fetchCenters = useCallback(async () => {
     try {
       const response = await api.get('/v1/centers')
       setCenters(response.data)
     } catch (error) {
       console.error('Failed to fetch centers:', error)
     }
-  }
+  }, [])
 
-  const fetchWarehouses = async () => {
+  const fetchWarehouses = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -73,7 +78,12 @@ export function WarehousesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchCenters()
+    fetchWarehouses()
+  }, [fetchCenters, fetchWarehouses])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,12 +125,45 @@ export function WarehousesPage() {
     }
   }
 
+  const handleCloseClick = (id: number) => {
+    setCloseTargetId(id)
+    setCloseReason('')
+  }
+
+  const handleCloseSubmit = async () => {
+    if (!closeTargetId || !closeReason.trim()) return
+    try {
+      await closeMutation.mutateAsync({ id: closeTargetId, reason: closeReason.trim() })
+      setShowCloseConfirm(false)
+      setCloseTargetId(null)
+      setCloseReason('')
+      fetchWarehouses()
+    } catch (error) {
+      console.error('Failed to close warehouse:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (canCloseData && closeTargetId !== null) {
+      if (canCloseData.canClose) {
+        setShowCloseConfirm(true)
+      } else {
+        setShowCloseBlock(true)
+      }
+    }
+  }, [canCloseData, closeTargetId])
+
   const paginatedWarehouses = useMemo(() => {
     const start = currentPage * pageSize
     return warehouses.slice(start, start + pageSize)
   }, [warehouses, currentPage])
 
   const totalPages = Math.ceil(warehouses.length / pageSize)
+
+  function formatDateTime(value?: string): string {
+    if (!value) return '-'
+    return new Date(value).toLocaleString('ko-KR')
+  }
 
   return (
     <div className="p-6">
@@ -183,7 +226,15 @@ export function WarehousesPage() {
                 {paginatedWarehouses.map((warehouse) => (
                   <tr key={warehouse.id} className="hover:bg-neutral-50">
                     <td className="px-6 py-4 font-mono text-sm">{warehouse.code}</td>
-                    <td className="px-6 py-4 font-medium">{warehouse.name}</td>
+                    <td className="px-6 py-4 font-medium">
+                      {warehouse.name}
+                      {warehouse.status === 'CLOSED' && (
+                        <div className="text-xs text-neutral-500 mt-1">
+                          <div>폐쇄 사유: {warehouse.closureReason || '-'}</div>
+                          <div>폐쇄 일시: {formatDateTime(warehouse.closedAt)}</div>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <span className="flex items-center gap-1 text-sm">
                         <Building2 className="w-4 h-4" />
@@ -195,26 +246,39 @@ export function WarehousesPage() {
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         warehouse.status === 'ACTIVE'
                           ? 'bg-green-100 text-green-700'
-                          : 'bg-neutral-100 text-neutral-600'
+                          : 'bg-red-100 text-red-700'
                       }`}>
-                        {warehouse.status}
+                        {warehouse.status === 'CLOSED' ? '폐쇄됨' : warehouse.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(warehouse)}
-                        className="p-2 hover:bg-neutral-100 rounded-lg text-text-secondary"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteConfirm({ open: true, id: warehouse.id })}
-                        className="p-2 hover:bg-red-50 rounded-lg text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {warehouse.status === 'ACTIVE' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(warehouse)}
+                            className="p-2 hover:bg-neutral-100 rounded-lg text-text-secondary"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirm({ open: true, id: warehouse.id })}
+                            className="p-2 hover:bg-red-50 rounded-lg text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCloseClick(warehouse.id)}
+                            disabled={canCloseLoading && closeTargetId === warehouse.id}
+                            className="p-2 hover:bg-orange-50 rounded-lg text-orange-600 disabled:opacity-50"
+                            title="창고 폐쇄"
+                          >
+                            <Lock className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -283,6 +347,79 @@ export function WarehousesPage() {
         variant="destructive"
         confirmLabel="삭제"
       />
+
+      {showCloseBlock && canCloseData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <h2 className="text-xl font-bold">창고 폐쇄 불가</h2>
+            </div>
+            <p className="text-sm text-neutral-600 mb-4">다음 사유로 인해 창고를 폐쇄할 수 없습니다.</p>
+            <ul className="space-y-2 mb-6">
+              {canCloseData.reasons.map((reason) => (
+                <li key={reason} className="flex items-center gap-2 text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {reason}
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCloseBlock(false)
+                  setCloseTargetId(null)
+                }}
+                className="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCloseConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-2">창고 폐쇄</h2>
+            <p className="text-sm text-neutral-600 mb-4">폐쇄 사유를 입력하고 확인을 눌러주세요.</p>
+            <div className="mb-4">
+              <label htmlFor="close-reason" className="block text-sm font-medium mb-1">폐쇄 사유 *</label>
+              <textarea
+                id="close-reason"
+                value={closeReason}
+                onChange={(e) => setCloseReason(e.target.value)}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg min-h-[80px]"
+                placeholder="폐쇄 사유를 입력하세요"
+                required
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCloseConfirm(false)
+                  setCloseTargetId(null)
+                  setCloseReason('')
+                }}
+                className="flex-1 px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleCloseSubmit()}
+                disabled={!closeReason.trim() || closeMutation.isPending}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {closeMutation.isPending ? '처리 중...' : '폐쇄'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

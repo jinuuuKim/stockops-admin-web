@@ -19,7 +19,7 @@ import {
   Building2, Warehouse, Menu, X,
   Thermometer, BarChart3, Brain,
   Shield, Bell, FileText, TrendingUp, SlidersHorizontal, ClipboardList,
-  ShoppingCart
+  ShoppingCart, ArrowLeftRight
 } from 'lucide-react'
 
 interface NavItem {
@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
   { to: '/products', label: '상품 관리', icon: Package },
   { to: '/inventory', label: '재고 관리', icon: Package },
   { to: '/stock-adjustments', label: '재고 조정', icon: SlidersHorizontal },
+  { to: '/inventory-transfers', label: '재고 이동', icon: ArrowLeftRight },
   { to: '/cycle-counts', label: '재고 실사', icon: ClipboardList },
   { to: '/inbound', label: '입고 관리', icon: ArrowDownToLine },
   { to: '/outbound', label: '출고 관리', icon: ArrowUpFromLine },
