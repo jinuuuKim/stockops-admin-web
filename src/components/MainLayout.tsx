@@ -19,7 +19,7 @@ import {
   Building2, Warehouse, Menu, X,
   Thermometer, BarChart3, Brain,
   Shield, Bell, FileText, TrendingUp, SlidersHorizontal, ClipboardList,
-  ShoppingCart, ArrowLeftRight
+  ShoppingCart, ArrowLeftRight, Zap
 } from 'lucide-react'
 
 interface NavItem {
@@ -282,6 +282,17 @@ export function MainLayout() {
               >
                 <TrendingUp className="w-5 h-5" />
                 수요 예측
+              </Link>
+              <Link
+                to="/settings/escalation"
+                className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
+                  location.pathname === '/settings/escalation'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Zap className="w-5 h-5" />
+                알림 에스컬레이션
               </Link>
             </>
           )}

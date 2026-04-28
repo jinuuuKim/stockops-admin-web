@@ -26,6 +26,7 @@ import { StockAdjustmentPage } from '@/pages/StockAdjustmentPage'
 import { AdminPage } from '@/pages/admin/AdminPage'
 import { NoticeManagement } from '@/pages/admin/NoticeManagement'
 import { AuditLogViewer } from '@/pages/admin/AuditLogViewer'
+import { EscalationPolicyPage } from '@/pages/settings/EscalationPolicyPage'
 import { DemandForecastPage } from '@/pages/DemandForecastPage'
 import { CycleCountPage } from '@/pages/CycleCountPage'
 import { NotificationsPage } from '@/pages/NotificationsPage'
@@ -74,6 +75,7 @@ function App() {
           <Route path="locations" element={<LocationsPage />} />
           <Route path="expiry" element={<ExpiryPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/escalation" element={<EscalationPolicyPage />} />
           <Route path="environment" element={<EnvironmentPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="ai" element={<AIFeaturesPage />} />
