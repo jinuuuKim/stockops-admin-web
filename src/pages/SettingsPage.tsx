@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Settings, Users, Shield, Bell, Key, Database, ChevronRight } from 'lucide-react'
 
 type TabId = 'general' | 'users' | 'permissions' | 'notifications' | 'api' | 'backup'
@@ -208,11 +209,29 @@ function PermissionsSettings() {
 }
 
 function NotificationsSettings() {
+  const navigate = useNavigate()
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-text-primary">알림 설정</h2>
 
       <div className="space-y-6">
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-blue-900">알림 채널 상세 설정</h3>
+              <p className="text-sm text-blue-700 mt-1">알림 유형별로 SMS, 이메일, 웹훅 채널을 설정하세요.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/settings/notification-channels')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              채널 설정 관리
+            </button>
+          </div>
+        </div>
+
         <div className="form-section">
           <h3 className="text-sm font-medium text-text-secondary mb-3">알림 채널</h3>
           <div className="space-y-2">

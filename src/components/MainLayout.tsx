@@ -294,6 +294,17 @@ export function MainLayout() {
                 <Zap className="w-5 h-5" />
                 알림 에스컬레이션
               </Link>
+              <Link
+                to="/settings/notification-channels"
+                className={`flex items-center gap-3 p-3 rounded-lg mb-1 transition-colors ${
+                  location.pathname === '/settings/notification-channels'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Bell className="w-5 h-5" />
+                알림 채널 설정
+              </Link>
             </>
           )}
         </nav>
