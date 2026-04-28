@@ -21,9 +21,22 @@ import {
   useNotificationPermission,
   useNotifications,
 } from '@/hooks/useNotifications'
+import { useWebSocket } from '@/hooks/useWebSocket'
+import { showToast } from '@/lib/toast'
 import type { NotificationType } from '@/types/notification'
 
 const BROWSER_NOTIFICATION_STORAGE_KEY = 'stockops-browser-notification-ids'
+const MAX_REALTIME_NOTIFICATIONS = 50
+
+interface RealtimeNotification {
+  id: string
+  userId: number
+  type: NotificationType
+  title: string
+  message: string
+  read: boolean
+  createdAt: string
+}
 
 /**
  * Notification bell button and dropdown inbox.
@@ -35,10 +48,12 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const shownBrowserNotifications = useRef<Set<number>>(loadShownNotificationIds())
+  const [realtimeNotifications, setRealtimeNotifications] = useState<RealtimeNotification[]>([])
   const { data: notifications = [], unreadNotifications, unreadCount, refetch, isFetching } = useNotifications()
   const markAsRead = useMarkNotificationAsRead()
   const markAllAsRead = useMarkAllNotificationsAsRead()
   const { permission, requestPermission } = useNotificationPermission()
+  const { lastMessage } = useWebSocket('/topic/stock')
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent): void {
@@ -64,7 +79,12 @@ export function NotificationBell() {
       return
     }
 
-    unreadNotifications.forEach((notification) => {
+    const allUnread = [...realtimeNotifications.filter((n) => !n.read), ...unreadNotifications]
+
+    allUnread.forEach((notification) => {
+      if (typeof notification.id !== 'number') {
+        return
+      }
       if (shownBrowserNotifications.current.has(notification.id)) {
         return
       }
@@ -81,7 +101,59 @@ export function NotificationBell() {
       shownBrowserNotifications.current.add(notification.id)
       persistShownNotificationIds(shownBrowserNotifications.current)
     })
-  }, [permission, unreadNotifications])
+  }, [permission, unreadNotifications, realtimeNotifications])
+
+  useEffect(() => {
+    if (lastMessage?.eventType !== 'STOCK_CHANGE') {
+      return
+    }
+
+    const payload = lastMessage as {
+      eventType: string
+      changeType: 'INBOUND' | 'OUTBOUND' | 'ADJUSTMENT'
+      productId: number
+      locationId: number
+      quantity: number
+      newTotal: number
+      timestamp: string
+    }
+
+    const titleMap: Record<string, string> = {
+      INBOUND: '입고 완료',
+      OUTBOUND: '출고 완료',
+      ADJUSTMENT: '재고 조정',
+    }
+
+    const title = titleMap[payload.changeType] ?? '재고 변경'
+    const message = `productId: ${payload.productId}, quantity: ${payload.quantity}, newTotal: ${payload.newTotal}`
+
+    const notification: RealtimeNotification = {
+      id: `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      userId: 0,
+      type: 'STOCK_CHANGE',
+      title,
+      message,
+      read: false,
+      createdAt: payload.timestamp ?? new Date().toISOString(),
+    }
+
+    setRealtimeNotifications((prev) => {
+      const next = [notification, ...prev]
+      if (next.length > MAX_REALTIME_NOTIFICATIONS) {
+        next.pop()
+      }
+      return next
+    })
+
+    showToast({ message: `${title}: ${message}`, variant: 'success' })
+  }, [lastMessage])
+
+  const allNotifications = useMemo(
+    () => [...realtimeNotifications, ...(notifications || [])],
+    [realtimeNotifications, notifications]
+  )
+
+  const allUnreadCount = unreadCount + realtimeNotifications.filter((n) => !n.read).length
 
   const permissionLabel = useMemo(() => {
     switch (permission) {
@@ -103,10 +175,17 @@ export function NotificationBell() {
 
   async function handleMarkAllAsRead(event: ReactMouseEvent<HTMLButtonElement>): Promise<void> {
     event.stopPropagation()
+    setRealtimeNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     await markAllAsRead.mutateAsync()
   }
 
-  async function handleMarkAsRead(notificationId: number): Promise<void> {
+  async function handleMarkAsRead(notificationId: number | string): Promise<void> {
+    if (typeof notificationId === 'string') {
+      setRealtimeNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+      )
+      return
+    }
     await markAsRead.mutateAsync(notificationId)
   }
 
@@ -120,9 +199,9 @@ export function NotificationBell() {
         aria-expanded={isOpen}
       >
         <Bell className="w-5 h-5 text-text-secondary" />
-        {unreadCount > 0 && (
+        {allUnreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {allUnreadCount > 99 ? '99+' : allUnreadCount}
           </span>
         )}
       </button>
@@ -135,7 +214,7 @@ export function NotificationBell() {
               <p className="text-xs text-text-secondary mt-1">{permissionLabel}</p>
             </div>
 
-            {unreadCount > 0 && (
+            {allUnreadCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAllAsRead}
@@ -170,13 +249,13 @@ export function NotificationBell() {
           )}
 
           <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {allNotifications.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-text-secondary">
                 {isFetching ? '알림을 불러오는 중...' : '새로운 알림이 없습니다.'}
               </div>
             ) : (
               <ul className="divide-y divide-neutral-100">
-                {notifications.map((notification) => (
+                {allNotifications.map((notification) => (
                   <li key={notification.id} className="px-4 py-3 hover:bg-neutral-50 transition-colors">
                     <div className="flex items-start gap-3">
                       <div className={`mt-0.5 ${notification.read ? 'text-neutral-400' : getNotificationAccentClass(notification.type)}`}>
@@ -220,8 +299,8 @@ export function NotificationBell() {
           </div>
 
           <div className="px-4 py-2.5 border-t border-neutral-200 bg-neutral-50 text-xs text-text-secondary flex items-center justify-between">
-            <span>총 {notifications.length}건</span>
-            <span>읽지 않음 {unreadCount}건</span>
+            <span>총 {allNotifications.length}건</span>
+            <span>읽지 않음 {allUnreadCount}건</span>
           </div>
         </div>
       )}
@@ -237,6 +316,8 @@ function renderNotificationIcon(type: NotificationType) {
       return <Info className="w-4 h-4" />
     case 'PURCHASE_ORDER_STATUS_CHANGED':
       return <PackageCheck className="w-4 h-4" />
+    case 'STOCK_CHANGE':
+      return <PackageCheck className="w-4 h-4" />
     default:
       return <Bell className="w-4 h-4" />
   }
@@ -249,6 +330,8 @@ function getNotificationAccentClass(type: NotificationType): string {
     case 'EXPIRY_APPROACHING':
       return 'text-rose-600'
     case 'PURCHASE_ORDER_STATUS_CHANGED':
+      return 'text-emerald-600'
+    case 'STOCK_CHANGE':
       return 'text-emerald-600'
     default:
       return 'text-primary-600'

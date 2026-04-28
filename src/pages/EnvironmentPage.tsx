@@ -35,11 +35,14 @@ import {
   useControllers,
 } from '@/hooks/useEnvironment'
 import { useControllerCommand, useControllerCommands } from '@/hooks/useControllerCommand'
+import { useWebSocket } from '@/hooks/useWebSocket'
+import type { ConnectionStatus } from '@/hooks/useWebSocket'
 import type {
   AlertSeverity,
   ControllerCommand,
   ControllerStatus,
   ControllerType,
+  DashboardLatestReading,
   EnvironmentController,
   SensorAlert,
   SensorDevice,
@@ -135,6 +138,54 @@ export function EnvironmentPage() {
 
   const sensors = useMemo(() => sensorsQuery.data?.content ?? [], [sensorsQuery.data?.content])
   const controllers = useMemo(() => controllersQuery.data?.content ?? [], [controllersQuery.data?.content])
+
+  const { lastMessage, connectionStatus } = useWebSocket('/topic/environment')
+  const [liveReadings, setLiveReadings] = useState<Map<number, DashboardLatestReading>>(new Map())
+
+  useEffect(() => {
+    if (!lastMessage || lastMessage.eventType !== 'ENV_SENSOR') return
+
+    const payload = lastMessage as unknown as {
+      sensorId: string
+      sensorType: string
+      value: number
+      locationId: string
+      timestamp: string
+    }
+
+    const sensor = sensors.find((s) => s.sensorId === payload.sensorId)
+    if (!sensor) return
+
+    setLiveReadings((prev) => {
+      const next = new Map(prev)
+      next.set(sensor.id, {
+        sensorId: sensor.id,
+        sensorName: sensor.name,
+        sensorType: payload.sensorType as SensorType,
+        location: payload.locationId,
+        value: payload.value,
+        valueKind: payload.sensorType,
+        unit: inferUnitFromSensorType(payload.sensorType as SensorType),
+        status: 'NORMAL',
+        recordedAt: payload.timestamp,
+      })
+      return next
+    })
+  }, [lastMessage, sensors])
+
+  const mergedLatestReadings = useMemo(() => {
+    const base = dashboardQuery.data?.latestReadings ?? []
+    const liveMap = new Map(liveReadings)
+    const merged = base.map((reading) => {
+      const live = liveMap.get(reading.sensorId)
+      if (live) {
+        liveMap.delete(reading.sensorId)
+        return live
+      }
+      return reading
+    })
+    return merged.concat(Array.from(liveMap.values()))
+  }, [dashboardQuery.data?.latestReadings, liveReadings])
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -364,17 +415,20 @@ export function EnvironmentPage() {
           <h1 className="text-2xl font-bold text-text-primary">🌡️ 환경 모니터링</h1>
           <p className="mt-1 text-text-secondary">실시간 센서, 알림, 히스토리, 제어기 명령 상태를 확인하세요.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            void handleRefresh()
-          }}
-          disabled={isAnyLoading}
-          className="flex items-center gap-2 self-start rounded-lg border border-neutral-200 bg-white px-4 py-2 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCw className={`h-4 w-4 ${isAnyLoading ? 'animate-spin' : ''}`} />
-          새로고침
-        </button>
+        <div className="flex flex-col items-end gap-2 self-start">
+          <ConnectionStatusDot status={connectionStatus} />
+          <button
+            type="button"
+            onClick={() => {
+              void handleRefresh()
+            }}
+            disabled={isAnyLoading}
+            className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${isAnyLoading ? 'animate-spin' : ''}`} />
+            새로고침
+          </button>
+        </div>
       </div>
 
       {pageError ? (
@@ -421,8 +475,8 @@ export function EnvironmentPage() {
             <SectionLoading label="대시보드 집계 로딩 중" />
           ) : (
             <div className="space-y-3">
-              {(dashboardQuery.data?.latestReadings ?? []).length > 0 ? (
-                dashboardQuery.data?.latestReadings.map((reading) => (
+              {mergedLatestReadings.length > 0 ? (
+                mergedLatestReadings.map((reading) => (
                   <button
                     key={reading.sensorId}
                     type="button"
@@ -1208,4 +1262,45 @@ function getUnitSymbol(unit: string | null | undefined): string {
   if (u === 'mg/m3' || u === 'mg/m³') return ' mg/m³'
 
   return ` ${unit}`
+}
+
+function inferUnitFromSensorType(sensorType: SensorType | null | undefined): string | null {
+  if (!sensorType) return null
+  switch (sensorType) {
+    case 'TEMPERATURE':
+      return 'celsius'
+    case 'HUMIDITY':
+      return 'percent'
+    case 'PRESSURE':
+      return 'hPa'
+    case 'AIR_QUALITY':
+      return 'μg/m³'
+    case 'CO2':
+      return 'ppm'
+    case 'TVOC':
+      return 'mg/m³'
+    default:
+      return null
+  }
+}
+
+function ConnectionStatusDot({ status }: { status: ConnectionStatus }) {
+  const colors: Record<ConnectionStatus, string> = {
+    connected: 'bg-success',
+    connecting: 'bg-warning animate-pulse',
+    disconnected: 'bg-error',
+    fallback: 'bg-warning',
+  }
+  const labels: Record<ConnectionStatus, string> = {
+    connected: '실시간 연결 중',
+    connecting: '연결 시도 중',
+    disconnected: '연결 끊김',
+    fallback: '폴� 모드',
+  }
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`inline-block h-2.5 w-2.5 rounded-full ${colors[status]}`} />
+      <span className="text-xs text-text-light">{labels[status]}</span>
+    </div>
+  )
 }

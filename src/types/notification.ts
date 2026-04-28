@@ -5,7 +5,7 @@
  * @since 1.0
  */
 
-export type NotificationType = 'LOW_STOCK' | 'EXPIRY_APPROACHING' | 'PURCHASE_ORDER_STATUS_CHANGED'
+export type NotificationType = 'LOW_STOCK' | 'EXPIRY_APPROACHING' | 'PURCHASE_ORDER_STATUS_CHANGED' | 'STOCK_CHANGE'
 
 /**
  * Notification payload returned by the backend API.
