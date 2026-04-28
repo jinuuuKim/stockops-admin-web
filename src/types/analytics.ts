@@ -125,6 +125,7 @@ export interface ExpiryWasteRow {
 export interface ExpiryWasteReportResponse {
   summary: ExpiryWasteSummary
   rows: ExpiryWasteRow[]
+  monthlyData?: ExpiryWasteMonthly[]
 }
 
 // ─── Purchase Order Lead Time ────────────────────────────────────────────────
@@ -162,6 +163,8 @@ export interface PurchaseOrderLeadTimeRow {
 export interface PurchaseOrderLeadTimeReportResponse {
   summary: PurchaseOrderLeadTimeSummary
   rows: PurchaseOrderLeadTimeRow[]
+  monthlyData?: LeadTimeMonthly[]
+  suppliers?: LeadTimeSupplier[]
 }
 
 // ─── Fill Rate ───────────────────────────────────────────────────────────────
@@ -205,6 +208,123 @@ export interface FillRateRow {
 export interface FillRateReportResponse {
   summary: FillRateSummary
   rows: FillRateRow[]
+}
+
+// ─── Inventory Turnover ──────────────────────────────────────────────────────
+
+/**
+ * Inventory turnover item per product.
+ */
+export interface InventoryTurnoverItem {
+  productId: number
+  productName: string
+  productBarcode: string
+  turnoverRate: number
+  cogs: number
+  avgInventory: number
+}
+
+/**
+ * Inventory turnover report response.
+ */
+export interface InventoryTurnoverReportResponse {
+  items: InventoryTurnoverItem[]
+}
+
+// ─── ABC Analysis ────────────────────────────────────────────────────────────
+
+/**
+ * ABC analysis item per product.
+ */
+export interface AbcAnalysisItem {
+  productId: number
+  productName: string
+  revenue: number
+  revenuePercentage: number
+  cumulativePercentage: number
+  class: 'A' | 'B' | 'C'
+}
+
+/**
+ * ABC analysis report response.
+ */
+export interface AbcAnalysisReportResponse {
+  items: AbcAnalysisItem[]
+}
+
+// ─── XYZ Analysis ────────────────────────────────────────────────────────────
+
+/**
+ * XYZ analysis item per product.
+ */
+export interface XyzAnalysisItem {
+  productId: number
+  productName: string
+  coefficientOfVariation: number
+  class: 'X' | 'Y' | 'Z'
+}
+
+/**
+ * XYZ analysis report response.
+ */
+export interface XyzAnalysisReportResponse {
+  items: XyzAnalysisItem[]
+}
+
+// ─── ABC-XYZ Matrix ──────────────────────────────────────────────────────────
+
+/**
+ * Product inside an ABC-XYZ matrix cell.
+ */
+export interface AbcXyzMatrixProduct {
+  productId: number
+  productName: string
+}
+
+/**
+ * Single cell in the ABC-XYZ matrix.
+ */
+export interface AbcXyzMatrixCell {
+  abcClass: 'A' | 'B' | 'C'
+  xyzClass: 'X' | 'Y' | 'Z'
+  productCount: number
+  products: AbcXyzMatrixProduct[]
+}
+
+/**
+ * ABC-XYZ matrix report response.
+ */
+export interface AbcXyzMatrixReportResponse {
+  cells: AbcXyzMatrixCell[]
+}
+
+// ─── Expiry Waste Monthly ────────────────────────────────────────────────────
+
+/**
+ * Monthly expiry waste data point.
+ */
+export interface ExpiryWasteMonthly {
+  month: string
+  quarantinedQuantity: number
+}
+
+// ─── Lead Time Monthly / Supplier ────────────────────────────────────────────
+
+/**
+ * Monthly lead time data point.
+ */
+export interface LeadTimeMonthly {
+  month: string
+  avgLeadTimeHours: number
+}
+
+/**
+ * Lead time summary per supplier.
+ */
+export interface LeadTimeSupplier {
+  supplierName: string
+  avgLeadTimeHours: number
+  orderCount: number
 }
 
 // ─── Metric type union ───────────────────────────────────────────────────────
