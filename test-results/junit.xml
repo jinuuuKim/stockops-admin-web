@@ -1,7 +1,119 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="1" failures="0" errors="0" time="0.02734202">
-    <testsuite name="src/hooks/useOnlineStatus.test.tsx" timestamp="2026-04-22T02:24:35.128Z" hostname="93d10b6f5a29" tests="1" failures="0" errors="0" skipped="0" time="0.02734202">
-        <testcase classname="src/hooks/useOnlineStatus.test.tsx" name="useOnlineStatus &gt; reacts to online and offline browser events" time="0.023106751">
+<testsuites name="vitest tests" tests="51" failures="0" errors="0" time="1.576060779">
+    <testsuite name="src/api/categories.test.ts" timestamp="2026-04-28T09:56:52.569Z" hostname="93d10b6f5a29" tests="5" failures="0" errors="0" skipped="0" time="0.012286151">
+        <testcase classname="src/api/categories.test.ts" name="categories API &gt; getCategories calls /v1/categories with flat=true" time="0.005180997">
+        </testcase>
+        <testcase classname="src/api/categories.test.ts" name="categories API &gt; getCategories calls /v1/categories with rootOnly=true" time="0.001103767">
+        </testcase>
+        <testcase classname="src/api/categories.test.ts" name="categories API &gt; getCategoryTree calls /v1/categories without params" time="0.000654282">
+        </testcase>
+        <testcase classname="src/api/categories.test.ts" name="categories API &gt; getInventoryByCategory calls /v1/inventory/by-category with categoryId" time="0.000701394">
+        </testcase>
+        <testcase classname="src/api/categories.test.ts" name="categories API &gt; propagates API errors" time="0.002247961">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/api/reports.test.ts" timestamp="2026-04-28T09:56:52.572Z" hostname="93d10b6f5a29" tests="7" failures="0" errors="0" skipped="0" time="0.01379594">
+        <testcase classname="src/api/reports.test.ts" name="reports API &gt; getInventoryTurnoverReport calls correct endpoint with params" time="0.005858479">
+        </testcase>
+        <testcase classname="src/api/reports.test.ts" name="reports API &gt; getInventoryTurnoverReport strips undefined params" time="0.00070419">
+        </testcase>
+        <testcase classname="src/api/reports.test.ts" name="reports API &gt; getAbcAnalysisReport calls correct endpoint" time="0.000840032">
+        </testcase>
+        <testcase classname="src/api/reports.test.ts" name="reports API &gt; getAbcAnalysisReport without centerId sends empty params" time="0.000590516">
+        </testcase>
+        <testcase classname="src/api/reports.test.ts" name="reports API &gt; getXyzAnalysisReport calls correct endpoint" time="0.000973611">
+        </testcase>
+        <testcase classname="src/api/reports.test.ts" name="reports API &gt; getAbcXyzMatrixReport calls correct endpoint" time="0.000673327">
+        </testcase>
+        <testcase classname="src/api/reports.test.ts" name="reports API &gt; propagates API errors" time="0.002190537">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/hooks/useCategories.test.tsx" timestamp="2026-04-28T09:56:52.573Z" hostname="93d10b6f5a29" tests="8" failures="0" errors="0" skipped="0" time="0.403352891">
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useCategories &gt; fetches flat categories successfully" time="0.093050143">
+        </testcase>
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useCategories &gt; returns loading state initially" time="0.006824009">
+        </testcase>
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useCategories &gt; returns error state on API failure" time="0.057868516">
+        </testcase>
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useCategoryTree &gt; fetches category tree with nested children" time="0.056657382">
+        </testcase>
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useCategoryTree &gt; returns error state when tree fetch fails" time="0.057785747">
+        </testcase>
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useInventoryByCategory &gt; fetches inventory summary for a given category" time="0.057648711">
+        </testcase>
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useInventoryByCategory &gt; does not fetch when categoryId is null" time="0.006056732">
+        </testcase>
+        <testcase classname="src/hooks/useCategories.test.tsx" name="useInventoryByCategory &gt; returns error state on API failure" time="0.061290708">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/hooks/useEscalationPolicies.test.tsx" timestamp="2026-04-28T09:56:52.575Z" hostname="93d10b6f5a29" tests="7" failures="0" errors="0" skipped="0" time="0.393862842">
+        <testcase classname="src/hooks/useEscalationPolicies.test.tsx" name="useEscalationPolicies &gt; fetches policies when centerId is provided" time="0.100684126">
+        </testcase>
+        <testcase classname="src/hooks/useEscalationPolicies.test.tsx" name="useEscalationPolicies &gt; does not fetch when centerId is null" time="0.004745746">
+        </testcase>
+        <testcase classname="src/hooks/useEscalationPolicies.test.tsx" name="useEscalationPolicies &gt; create mutation invalidates policies cache on success" time="0.059536521">
+        </testcase>
+        <testcase classname="src/hooks/useEscalationPolicies.test.tsx" name="useEscalationPolicies &gt; update mutation calls PUT and invalidates cache" time="0.05506422">
+        </testcase>
+        <testcase classname="src/hooks/useEscalationPolicies.test.tsx" name="useEscalationPolicies &gt; delete mutation calls DELETE and invalidates cache" time="0.055226198">
+        </testcase>
+        <testcase classname="src/hooks/useEscalationPolicies.test.tsx" name="useActiveAlerts &gt; fetches pending alerts" time="0.055870897">
+        </testcase>
+        <testcase classname="src/hooks/useEscalationPolicies.test.tsx" name="useAcknowledgeAlert &gt; acknowledges alert and invalidates cache" time="0.055650124">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/hooks/useOfflineInbound.test.tsx" timestamp="2026-04-28T09:56:52.577Z" hostname="93d10b6f5a29" tests="6" failures="0" errors="0" skipped="0" time="0.195862035">
+        <testcase classname="src/hooks/useOfflineInbound.test.tsx" name="useOfflineInbound &gt; saves inbound data offline and updates pending count" time="0.043585203">
+        </testcase>
+        <testcase classname="src/hooks/useOfflineInbound.test.tsx" name="useOfflineInbound &gt; syncs pending records and clears them on success" time="0.010934">
+        </testcase>
+        <testcase classname="src/hooks/useOfflineInbound.test.tsx" name="useOfflineInbound &gt; tracks pending count on mount" time="0.061893558">
+        </testcase>
+        <testcase classname="src/hooks/useOfflineInbound.test.tsx" name="useOfflineInbound &gt; does not sync when offline" time="0.008571501">
+        </testcase>
+        <testcase classname="src/hooks/useOfflineInbound.test.tsx" name="useOfflineInbound &gt; handles sync failures gracefully" time="0.007458008">
+        </testcase>
+        <testcase classname="src/hooks/useOfflineInbound.test.tsx" name="useOfflineInbound &gt; refreshPendingCount updates the count" time="0.057834301">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/hooks/usePwaInstall.test.tsx" timestamp="2026-04-28T09:56:52.579Z" hostname="93d10b6f5a29" tests="8" failures="0" errors="0" skipped="0" time="0.086198826">
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; initially is not installable and not standalone" time="0.036973902">
+        </testcase>
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; detects standalone mode from display-mode matchMedia" time="0.005097591">
+        </testcase>
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; detects iOS Safari from user agent" time="0.004877458">
+        </testcase>
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; sets installable when beforeinstallprompt fires" time="0.007711653">
+        </testcase>
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; promptInstall calls deferred prompt and sets standalone on acceptance" time="0.008986093">
+        </testcase>
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; dismissPrompt sets dismissed state and persists to localStorage" time="0.005511593">
+        </testcase>
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; restores dismissed state from localStorage" time="0.003374732">
+        </testcase>
+        <testcase classname="src/hooks/usePwaInstall.test.tsx" name="usePwaInstall &gt; does not consider expired dismissal as dismissed" time="0.008006413">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/hooks/useReports.test.tsx" timestamp="2026-04-28T09:56:52.580Z" hostname="93d10b6f5a29" tests="10" failures="0" errors="0" skipped="0" time="0.470702094">
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useInventoryTurnover fetches report when dates are provided" time="0.093478667">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useInventoryTurnover is disabled when dates are missing" time="0.006970792">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useAbcAnalysis fetches ABC report lazily when enabled" time="0.00683222">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useAbcAnalysis fetches when enabled=true" time="0.056794868">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useXyzAnalysis returns error on API failure" time="0.055886053">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useAbcXyzMatrix fetches matrix data" time="0.056808831">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useExpiryWaste is disabled without date range" time="0.004998024">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useExpiryWaste fetches when dates are provided" time="0.057742205">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useLeadTime fetches lead time report" time="0.059189759">
+        </testcase>
+        <testcase classname="src/hooks/useReports.test.tsx" name="useReports hooks &gt; useStockAging fetches stock aging report" time="0.06459399">
         </testcase>
     </testsuite>
 </testsuites>
