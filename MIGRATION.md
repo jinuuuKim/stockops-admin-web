@@ -17,8 +17,8 @@ on 2026-05-11 using `git filter-branch`.
 ### 1. Clone this repository
 
 ```bash
-git clone https://github.com/your-org/stockops-web.git
-cd stockops-web
+git clone https://github.com/your-org/stockops-admin-web.git
+cd stockops-admin-web
 ```
 
 ### 2. Install dependencies
