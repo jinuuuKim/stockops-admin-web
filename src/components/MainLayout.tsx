@@ -48,6 +48,10 @@ const allNavItems: NavItem[] = [
   { to: '/settings', label: '설정', icon: Settings },
 ]
 
+const pageTitleOverrides: Record<string, string> = {
+  '/admin/ai-suggestions': 'AI 제안 관리',
+}
+
 /**
  * Returns navigation items visible to the given user role.
  *
@@ -169,6 +173,11 @@ export function MainLayout() {
   }, [sidebarOpen])
 
   const getPageTitle = () => {
+    const overrideTitle = pageTitleOverrides[location.pathname]
+    if (overrideTitle) {
+      return overrideTitle
+    }
+
     const item = allNavItems.find(item => item.to === location.pathname)
     return item?.label || 'StockOps'
   }
