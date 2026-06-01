@@ -8,7 +8,7 @@
 
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 function isAdminRole(role: string | undefined): boolean {
   return role === 'ADMIN' || role === 'ROLE_ADMIN' || role === 'SYSTEM_ADMIN'
@@ -31,32 +31,37 @@ interface ProtectedRouteProps {
  * @returns Children if authenticated, otherwise redirects to login
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const token = useAuthStore((state) => state.token)
   const user = useAuthStore((state) => state.user)
+  const isRestoring = useAuthStore((state) => state.isRestoring)
+  const hasTriedRestore = useAuthStore((state) => state.hasTriedRestore)
+  const restoreSession = useAuthStore((state) => state.restoreSession)
   const location = useLocation()
-  const [isRehydrated, setIsRehydrated] = useState(false)
 
-  // Wait for Zustand persist to rehydrate from localStorage
   useEffect(() => {
-    // Check if persist has rehydrated by checking if token exists in storage
-    const storedAuth = localStorage.getItem('auth-storage')
-    if (storedAuth) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsRehydrated(true)
-    } else {
-      // Set a small timeout to allow persist to complete
-      const timer = setTimeout(() => setIsRehydrated(true), 100)
-      return () => clearTimeout(timer)
+    if (!token && !hasTriedRestore && !isRestoring) {
+      void restoreSession()
     }
-  }, [])
+  }, [hasTriedRestore, isRestoring, restoreSession, token])
 
-  // Show nothing while rehydrating to prevent flash of login page
-  if (!isRehydrated) {
+  if (!token && (isRestoring || !hasTriedRestore)) {
     return null
   }
 
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />
+  if (!token) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          from: {
+            pathname: location.pathname,
+            search: location.search,
+            hash: location.hash,
+          },
+        }}
+      />
+    )
   }
 
   const adminPaths = ['/admin', '/admin/notices', '/admin/audit-logs', '/admin/ai-suggestions']

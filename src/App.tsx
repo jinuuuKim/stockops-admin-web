@@ -66,7 +66,7 @@ function routeElement(element: ReactNode) {
 /**
  * Main App component with route configuration.
  * - /login: Public login page
- * - /: Protected routes (requires authentication)
+  * - /: Protected routes (restores auth from refresh cookie before redirecting)
  * - /dashboard: Dashboard page
  * - /inventory: Inventory page
  * - /inbound: Inbound page
