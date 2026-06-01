@@ -5,7 +5,7 @@
  * @since 2.0
  */
 
-export type ScopeType = 'GLOBAL' | 'CENTER' | 'WAREHOUSE'
+export type ScopeType = 'ADMIN' | 'CENTER' | 'WAREHOUSE' | 'STORE'
 
 /**
  * Single scope assignment returned by the backend.

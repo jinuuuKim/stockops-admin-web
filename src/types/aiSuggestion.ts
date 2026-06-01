@@ -12,7 +12,7 @@ export type AISuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXECUTED
 
 export type AISuggestionAction = 'APPROVE' | 'REJECT' | 'EXECUTE'
 
-export type AISuggestionSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | (string & {})
+export type AISuggestionSeverity = 'INFO' | 'WARNING' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | (string & {})
 
 export type AISuggestionApprovalMode = 'MANUAL' | 'AUTO' | (string & {})
 

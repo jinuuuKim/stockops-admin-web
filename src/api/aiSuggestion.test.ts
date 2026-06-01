@@ -96,6 +96,48 @@ describe('aiSuggestion API', () => {
     expect(result).toEqual(suggestions)
   })
 
+  it('listSuggestions sends ADMIN scope filter param', async () => {
+    const suggestions = [buildSuggestion()]
+    vi.mocked(api.get).mockResolvedValue({ data: suggestions })
+
+    const result = await listSuggestions({
+      targetScopeType: 'ADMIN',
+      page: 0,
+      size: 10,
+    })
+
+    expect(api.get).toHaveBeenCalledWith('/v1/ai/suggestions', {
+      params: {
+        targetScopeType: 'ADMIN',
+        page: 0,
+        size: 10,
+      },
+    })
+    expect(result).toEqual(suggestions)
+  })
+
+  it('listSuggestions sends STORE scope filter param', async () => {
+    const suggestions = [buildSuggestion()]
+    vi.mocked(api.get).mockResolvedValue({ data: suggestions })
+
+    const result = await listSuggestions({
+      targetScopeType: 'STORE',
+      targetScopeId: 5,
+      page: 0,
+      size: 10,
+    })
+
+    expect(api.get).toHaveBeenCalledWith('/v1/ai/suggestions', {
+      params: {
+        targetScopeType: 'STORE',
+        targetScopeId: 5,
+        page: 0,
+        size: 10,
+      },
+    })
+    expect(result).toEqual(suggestions)
+  })
+
   it('executeSuggestion posts an empty body by default', async () => {
     const suggestion = buildSuggestion({ status: 'EXECUTED', allowedActions: [] })
     vi.mocked(api.post).mockResolvedValue({ data: suggestion })
