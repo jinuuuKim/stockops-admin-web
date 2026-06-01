@@ -7,11 +7,29 @@
  */
 
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { getErrorMessage } from '@/lib/httpError'
 import { useAuthStore } from '@/stores/authStore'
 import api from '@/lib/api'
 import type { LoginResponse } from '@/types/auth'
+
+function getRedirectPath(state: unknown): string {
+  if (!state || typeof state !== 'object' || !('from' in state)) {
+    return '/dashboard'
+  }
+
+  const from = (state as { from?: unknown }).from
+  if (!from || typeof from !== 'object') {
+    return '/dashboard'
+  }
+
+  const { pathname, search, hash } = from as { pathname?: unknown; search?: unknown; hash?: unknown }
+  if (typeof pathname !== 'string' || !pathname.startsWith('/') || pathname === '/login') {
+    return '/dashboard'
+  }
+
+  return `${pathname}${typeof search === 'string' ? search : ''}${typeof hash === 'string' ? hash : ''}`
+}
 
 /**
  * Login page with email/password authentication.
@@ -25,6 +43,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const login = useAuthStore((state) => state.login)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,7 +62,8 @@ export function LoginPage() {
 
       login(accessToken, user)
 
-      navigate('/dashboard')
+      const redirectPath = getRedirectPath(location.state)
+      navigate(redirectPath, { replace: true })
     } catch (err: unknown) {
       // Check for network errors (timeout, connection refused, etc.)
       const networkMessage = getErrorMessage(err)
