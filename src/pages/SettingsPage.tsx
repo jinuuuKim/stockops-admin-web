@@ -6,11 +6,22 @@
  * @since 1.0
  */
 
-import { useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, Users, Shield, Bell, Key, Database, ChevronRight, Plus } from 'lucide-react'
+import { AlertCircle, ChevronRight, Database, Key, Loader2, Pencil, Plus, Settings, Shield, Bell, Trash2, Users } from 'lucide-react'
+import { getAdminErrorMessage } from '@/api/admin'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { useAdminUsers, useCreateAdminUser, useDeleteAdminUser, useUpdateAdminUser } from '@/hooks/useAdmin'
+import type { AdminRoleName, AdminUser } from '@/types/admin'
 
 type TabId = 'general' | 'users' | 'permissions' | 'notifications' | 'api' | 'backup'
+
+type UserFormState = {
+  email: string
+  password: string
+  name: string
+  role: AdminRoleName
+}
 
 interface Tab {
   id: TabId
@@ -26,6 +37,31 @@ const tabs: Tab[] = [
   { id: 'api', label: 'API & 연동', icon: Key },
   { id: 'backup', label: '백업 & 복구', icon: Database },
 ]
+
+const userRoles: AdminRoleName[] = ['ADMIN', 'MANAGER', 'STAFF', 'USER']
+const usersPageSize = 10
+
+const emptyUserForm: UserFormState = {
+  email: '',
+  password: '',
+  name: '',
+  role: 'USER',
+}
+
+function formatDateTime(value: string) {
+  if (!value) return '-'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('general')
@@ -144,22 +180,322 @@ function GeneralSettings() {
 }
 
 function UsersSettings() {
+  const [page, setPage] = useState(0)
+  const [form, setForm] = useState<UserFormState>(emptyUserForm)
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const usersQuery = useAdminUsers({ page, size: usersPageSize })
+  const createUser = useCreateAdminUser()
+  const updateUser = useUpdateAdminUser()
+  const deleteUser = useDeleteAdminUser()
+
+  const usersPage = usersQuery.data
+  const users = usersPage?.content ?? []
+  const totalPages = usersPage?.totalPages ?? 0
+  const totalElements = usersPage?.totalElements ?? 0
+  const displayPage = (usersPage?.number ?? page) + 1
+  const isSaving = createUser.isPending || updateUser.isPending
+  const isDeleting = deleteUser.isPending
+
+  const openCreateForm = () => {
+    setEditingUser(null)
+    setForm(emptyUserForm)
+    setActionError(null)
+    setIsFormOpen(true)
+  }
+
+  const openEditForm = (user: AdminUser) => {
+    setEditingUser(user)
+    setForm({
+      email: user.email,
+      password: '',
+      name: user.name,
+      role: user.role,
+    })
+    setActionError(null)
+    setIsFormOpen(true)
+  }
+
+  const closeForm = () => {
+    if (isSaving) return
+    setIsFormOpen(false)
+    setEditingUser(null)
+    setForm(emptyUserForm)
+    setActionError(null)
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setActionError(null)
+
+    const name = form.name.trim()
+    const email = form.email.trim()
+
+    try {
+      if (editingUser) {
+        await updateUser.mutateAsync({
+          id: editingUser.id,
+          request: {
+            name,
+            role: form.role,
+          },
+        })
+      } else {
+        await createUser.mutateAsync({
+          email,
+          password: form.password,
+          name,
+          role: form.role,
+        })
+        setPage(0)
+      }
+
+      closeForm()
+    } catch (error) {
+      setActionError(getAdminErrorMessage(error, '사용자 저장 중 오류가 발생했습니다.'))
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setActionError(null)
+
+    try {
+      await deleteUser.mutateAsync(deleteTarget.id)
+      setDeleteTarget(null)
+      if (users.length === 1 && page > 0) {
+        setPage(page - 1)
+      }
+    } catch (error) {
+      setActionError(getAdminErrorMessage(error, '사용자 삭제 중 오류가 발생했습니다.'))
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-text-primary">사용자 관리</h2>
-        <button type="button" className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+        <div>
+          <h2 className="text-lg font-semibold text-text-primary">사용자 관리</h2>
+          <p className="mt-1 text-sm text-text-secondary">실제 사용자 API에서 계정을 조회하고 생성, 수정, 삭제합니다.</p>
+        </div>
+        <button
+          type="button"
+          onClick={openCreateForm}
+          className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+        >
           <Plus className="w-4 h-4" />
           사용자 추가
         </button>
       </div>
 
-      <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
-        <p className="font-medium text-text-primary">연결된 사용자 목록이 없습니다.</p>
-        <p className="mt-2 text-sm text-text-secondary">
-          사용자 목록은 실제 계정 연동 후 표시됩니다. 이 화면에서는 임시 사용자 데이터를 보여주지 않습니다.
-        </p>
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        계정 비활성화/재활성화는 백엔드 엔드포인트가 없어 현재 지원하지 않습니다. 이 화면에서는 상태 변경 버튼을 비활성화하고, 삭제만 실제 API로 처리합니다.
       </div>
+
+      {actionError && (
+        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{actionError}</span>
+        </div>
+      )}
+
+      {isFormOpen && (
+        <form aria-label={editingUser ? '사용자 수정 폼' : '사용자 추가 폼'} onSubmit={handleSubmit} className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="font-semibold text-text-primary">{editingUser ? '사용자 수정' : '사용자 추가'}</h3>
+            <button type="button" onClick={closeForm} className="text-sm text-text-secondary hover:text-text-primary">
+              닫기
+            </button>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor="user-email" className="block text-sm font-medium text-neutral-700 mb-1">이메일</label>
+              <input
+                id="user-email"
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                disabled={Boolean(editingUser) || isSaving}
+                required
+                className="w-full px-3 py-2 min-h-[44px] text-base border border-neutral-300 rounded-lg disabled:bg-neutral-100"
+              />
+            </div>
+            {!editingUser && (
+              <div>
+                <label htmlFor="user-password" className="block text-sm font-medium text-neutral-700 mb-1">초기 비밀번호</label>
+                <input
+                  id="user-password"
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                  disabled={isSaving}
+                  required
+                  className="w-full px-3 py-2 min-h-[44px] text-base border border-neutral-300 rounded-lg"
+                />
+              </div>
+            )}
+            <div>
+              <label htmlFor="user-name" className="block text-sm font-medium text-neutral-700 mb-1">이름</label>
+              <input
+                id="user-name"
+                type="text"
+                value={form.name}
+                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                disabled={isSaving}
+                required
+                className="w-full px-3 py-2 min-h-[44px] text-base border border-neutral-300 rounded-lg"
+              />
+            </div>
+            <div>
+              <label htmlFor="user-role" className="block text-sm font-medium text-neutral-700 mb-1">역할</label>
+              <select
+                id="user-role"
+                value={form.role}
+                onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as AdminRoleName }))}
+                disabled={isSaving}
+                className="w-full px-3 py-2 min-h-[44px] text-base border border-neutral-300 rounded-lg"
+              >
+                {userRoles.map((role) => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={closeForm} disabled={isSaving} className="px-4 py-2 min-h-[44px] border border-neutral-300 rounded-lg hover:bg-neutral-100 disabled:opacity-60">
+              취소
+            </button>
+            <button type="submit" disabled={isSaving} className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-60">
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {editingUser ? '수정 저장' : '사용자 생성'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {usersQuery.isLoading && (
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-8 text-text-secondary" role="status">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          사용자 목록을 불러오는 중입니다.
+        </div>
+      )}
+
+      {usersQuery.isError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center" role="alert">
+          <p className="font-medium text-red-800">사용자 목록을 불러오지 못했습니다.</p>
+          <p className="mt-2 text-sm text-red-700">{getAdminErrorMessage(usersQuery.error, '사용자 목록 조회 중 오류가 발생했습니다.')}</p>
+          <button type="button" onClick={() => usersQuery.refetch()} className="mt-4 px-4 py-2 min-h-[44px] rounded-lg border border-red-300 bg-white text-red-700 hover:bg-red-50">
+            다시 시도
+          </button>
+        </div>
+      )}
+
+      {!usersQuery.isLoading && !usersQuery.isError && users.length === 0 && (
+        <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
+          <p className="font-medium text-text-primary">등록된 사용자가 없습니다.</p>
+          <p className="mt-2 text-sm text-text-secondary">사용자 추가 버튼으로 실제 계정을 생성하세요. 임시 사용자 데이터는 표시하지 않습니다.</p>
+        </div>
+      )}
+
+      {!usersQuery.isLoading && !usersQuery.isError && users.length > 0 && (
+        <div className="space-y-4">
+          <div className="overflow-x-auto rounded-xl border border-neutral-200">
+            <table className="w-full min-w-[760px]">
+              <thead className="bg-neutral-50">
+                <tr className="border-b border-neutral-200">
+                  <th className="px-4 py-3 text-left text-sm font-medium text-text-secondary">이메일</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-text-secondary">이름</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-text-secondary">역할</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-text-secondary">생성일</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-text-secondary">상태</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-text-secondary">작업</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id} className="border-b border-neutral-100 last:border-0">
+                    <td className="px-4 py-3 text-sm text-text-primary">{user.email}</td>
+                    <td className="px-4 py-3 text-sm text-text-primary">{user.name}</td>
+                    <td className="px-4 py-3 text-sm text-text-primary">{user.role}</td>
+                    <td className="px-4 py-3 text-sm text-text-secondary">{formatDateTime(user.createdAt)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <button
+                        type="button"
+                        disabled
+                        title="비활성화/재활성화 백엔드 엔드포인트가 없어 지원하지 않습니다."
+                        className="rounded-full border border-neutral-200 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500"
+                      >
+                        상태 변경 미지원
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditForm(user)}
+                          aria-label={`${user.email} 수정`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm hover:bg-neutral-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(user)}
+                          aria-label={`${user.email} 삭제`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          삭제
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-text-secondary">총 {totalElements.toLocaleString()}명 · {displayPage} / {Math.max(totalPages, 1)} 페이지</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                disabled={page === 0}
+                className="px-4 py-2 min-h-[44px] rounded-lg border border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                이전
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((current) => current + 1)}
+                disabled={totalPages === 0 || page + 1 >= totalPages}
+                className="px-4 py-2 min-h-[44px] rounded-lg border border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                다음
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!isDeleting) setDeleteTarget(null)
+        }}
+        onConfirm={handleConfirmDelete}
+        title="사용자 삭제"
+        description={deleteTarget ? `${deleteTarget.email} 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.` : ''}
+        confirmLabel={isDeleting ? '삭제 중...' : '삭제'}
+        variant="destructive"
+      />
     </div>
   )
 }
