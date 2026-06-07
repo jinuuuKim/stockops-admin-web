@@ -37,6 +37,7 @@ const createMutateAsync = vi.fn()
 const updateMutateAsync = vi.fn()
 const deleteMutateAsync = vi.fn()
 const testMutateAsync = vi.fn()
+const refetchCenters = vi.fn()
 
 const fullTeamsWebhookUrl = 'https://contoso.webhook.office.com/webhookb2/raw-secret-token'
 
@@ -93,7 +94,9 @@ describe('NotificationChannelPage', () => {
     vi.mocked(useCenters).mockReturnValue({
       data: [{ id: 1, code: 'C01', name: '강남센터' }],
       isLoading: false,
-    } as ReturnType<typeof useCenters>)
+      isError: false,
+      refetch: refetchCenters,
+    } as unknown as ReturnType<typeof useCenters>)
     vi.mocked(useWarehousesByCenter).mockReturnValue({
       data: [{ id: 1, code: 'W01', name: '강남 1창고' }],
     } as ReturnType<typeof useWarehousesByCenter>)
@@ -161,6 +164,22 @@ describe('NotificationChannelPage', () => {
     } as unknown as ReturnType<typeof useNotificationChannelConfigs>)
     rerender(<NotificationChannelPage />)
     expect(screen.getByRole('alert')).toHaveTextContent('Microsoft Teams 채널 설정을 불러오지 못했습니다.')
+  })
+
+  it('shows center list error state with retry action', () => {
+    vi.mocked(useCenters).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: true,
+      refetch: refetchCenters,
+    } as unknown as ReturnType<typeof useCenters>)
+
+    render(<NotificationChannelPage />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('센터 목록을 불러오지 못했습니다. 다시 시도해 주세요.')
+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+
+    expect(refetchCenters).toHaveBeenCalledTimes(1)
   })
 
   it('creates a Teams channel with a valid webhook URL', async () => {

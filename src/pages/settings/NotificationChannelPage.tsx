@@ -150,7 +150,12 @@ export function NotificationChannelPage() {
   const [testingConfigId, setTestingConfigId] = useState<number | null>(null)
   const [testResults, setTestResults] = useState<Record<number, TestResultState | null>>({})
 
-  const { data: centers, isLoading: centersLoading } = useCenters()
+  const {
+    data: centers,
+    isLoading: centersLoading,
+    isError: centersIsError,
+    refetch: refetchCenters,
+  } = useCenters()
   const { data: warehouses } = useWarehousesByCenter(selectedCenterId)
   const {
     data: configs,
@@ -325,20 +330,34 @@ export function NotificationChannelPage() {
       {/* Center selector */}
       <div className="bg-white rounded-xl border border-neutral-200 p-4">
         <label htmlFor="centerFilter" className="block text-sm font-medium text-neutral-700 mb-2">센터 선택</label>
-        <select
-          id="centerFilter"
-          value={selectedCenterId ?? ''}
-          onChange={(e) => setSelectedCenterId(e.target.value ? Number(e.target.value) : null)}
-          className="w-full max-w-md px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          disabled={centersLoading}
-        >
-          <option value="">센터를 선택하세요</option>
-          {centers?.map((center) => (
-            <option key={center.id} value={center.id}>
-              {center.name}
-            </option>
-          ))}
-        </select>
+        {centersLoading ? (
+          <p className="text-sm text-text-secondary" role="status">센터 목록을 불러오는 중...</p>
+        ) : centersIsError ? (
+          <div className="max-w-md rounded-lg border border-error/30 bg-error/5 p-4 text-sm text-error" role="alert">
+            <p>센터 목록을 불러오지 못했습니다. 다시 시도해 주세요.</p>
+            <button
+              type="button"
+              onClick={() => void refetchCenters()}
+              className="mt-3 inline-flex items-center rounded-lg bg-error px-3 py-2 text-white hover:bg-error/90 transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : (
+          <select
+            id="centerFilter"
+            value={selectedCenterId ?? ''}
+            onChange={(e) => setSelectedCenterId(e.target.value ? Number(e.target.value) : null)}
+            className="w-full max-w-md px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="">센터를 선택하세요</option>
+            {centers?.map((center) => (
+              <option key={center.id} value={center.id}>
+                {center.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Config list */}
