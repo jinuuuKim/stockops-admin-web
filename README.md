@@ -79,3 +79,8 @@ npm run lint
 ## License
 
 Private — All rights reserved.
+## Environment And Secrets
+
+See [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md) for local `.env`, GitHub Actions secrets, and deployment environment setup.
+
+Never commit `.env`, real credentials, Terraform state, or AI-agent local configuration files.
