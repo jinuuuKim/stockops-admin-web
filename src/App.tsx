@@ -32,6 +32,7 @@ const WarehousesPage = lazyPage(() => import('@/pages/WarehousesPage'), 'Warehou
 const PurchaseOrderPage = lazyPage(() => import('@/pages/PurchaseOrderPage'), 'PurchaseOrderPage')
 const ProductsPage = lazyPage(() => import('@/pages/ProductsPage'), 'ProductsPage')
 const EnvironmentPage = lazyPage(() => import('@/pages/EnvironmentPage'), 'EnvironmentPage')
+const EnvironmentAlertsPage = lazyPage(() => import('@/pages/EnvironmentAlertsPage'), 'EnvironmentAlertsPage')
 const ReportsPage = lazyPage(() => import('@/pages/ReportsPage'), 'ReportsPage')
 const AIFeaturesPage = lazyPage(() => import('@/pages/AIFeaturesPage'), 'AIFeaturesPage')
 const StockAdjustmentPage = lazyPage(() => import('@/pages/StockAdjustmentPage'), 'StockAdjustmentPage')
@@ -109,6 +110,7 @@ function App() {
           <Route path="settings/escalation" element={routeElement(<EscalationPolicyPage />)} />
           <Route path="settings/notification-channels" element={routeElement(<NotificationChannelPage />)} />
           <Route path="environment" element={routeElement(<EnvironmentPage />)} />
+          <Route path="environment/alerts" element={routeElement(<EnvironmentAlertsPage />)} />
           <Route path="reports" element={routeElement(<ReportsPage />)} />
           <Route path="ai" element={routeElement(<AIFeaturesPage />)} />
           <Route path="ai/chat" element={routeElement(<AiChatPage />)} />

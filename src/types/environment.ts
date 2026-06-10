@@ -123,6 +123,8 @@ export interface SensorAlert {
   acknowledged: boolean
   acknowledgedAt: string | null
   acknowledgedBy: string | null
+  acknowledgementNote: string | null
+  resolvedAt: string | null
   createdAt: string
 }
 

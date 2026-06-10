@@ -31,6 +31,7 @@ interface NavItem {
 const allNavItems: NavItem[] = [
   { to: '/dashboard', label: '대시보드', icon: LayoutDashboard },
   { to: '/environment', label: '환경 모니터링', icon: Thermometer },
+  { to: '/environment/alerts', label: '환경 알림 처리', icon: Shield },
   { to: '/centers', label: '센터 관리', icon: Building2 },
   { to: '/warehouses', label: '창고 관리', icon: Warehouse },
   { to: '/products', label: '상품 관리', icon: Package },

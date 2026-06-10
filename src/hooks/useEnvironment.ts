@@ -11,6 +11,7 @@ import { AxiosError } from 'axios'
 import {
   createController,
   createSensor,
+  acknowledgeEnvironmentAlert,
   deleteController,
   deleteSensor,
   getControllerByExternalIds,
@@ -92,6 +93,24 @@ export function useSensorByExternalIds(
       return getSensorByExternalIds(siteId, sensorId)
     },
     enabled: Boolean(siteId && sensorId),
+  })
+}
+
+export function useAcknowledgeEnvironmentAlert(): UseMutationResult<
+  SensorAlert,
+  AxiosError,
+  { id: number; note: string }
+> {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, note }) => acknowledgeEnvironmentAlert(id, note),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['environment', 'alerts'] }),
+        queryClient.invalidateQueries({ queryKey: ['environment', 'dashboard'] }),
+      ])
+    },
   })
 }
 

@@ -156,3 +156,8 @@ export async function getEnvironmentAlerts(days = 30): Promise<SensorAlert[]> {
   })
   return Array.isArray(response.data) ? response.data : []
 }
+
+export async function acknowledgeEnvironmentAlert(id: number, note: string): Promise<SensorAlert> {
+  const response = await api.post<SensorAlert>(`/v1/environment/alerts/${id}/acknowledge`, { note })
+  return response.data
+}
