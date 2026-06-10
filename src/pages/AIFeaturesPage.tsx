@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { AiExplanationPanel } from '@/components/AiExplanationPanel'
+import { AiOpsSummaryPanel } from '@/components/AiOpsSummaryPanel'
 
 interface CenterOption {
   id: number
@@ -201,6 +202,15 @@ export function AIFeaturesPage() {
             </select>
           </div>
         </div>
+      </div>
+
+      {/* AI Operational Summary */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-200" data-testid="ai-ops-summary-section">
+        <AiOpsSummaryPanel
+          businessDate={new Date().toISOString().slice(0, 10)}
+          centerId={centerId}
+          warehouseId={warehouseId}
+        />
       </div>
 
       {/* Summary Cards */}
