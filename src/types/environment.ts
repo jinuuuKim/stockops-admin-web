@@ -54,6 +54,10 @@ export interface SensorDevice {
   sourceChannel: string
   active: boolean
   deleted: boolean
+  warnMin: number | null
+  warnMax: number | null
+  critMin: number | null
+  critMax: number | null
   createdAt: string
   updatedAt: string
 }
@@ -65,6 +69,10 @@ export interface SensorDeviceRequest {
   location: string
   mqttTopic: string
   sourceChannel: string
+  warnMin: number | null
+  warnMax: number | null
+  critMin: number | null
+  critMax: number | null
 }
 
 export interface EnvironmentController {

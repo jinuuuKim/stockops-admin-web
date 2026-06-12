@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MessageCircle, Send, X } from 'lucide-react'
+import { MessageCircle, Send, SquarePen, X } from 'lucide-react'
 import { useAIChatSession } from '@/hooks/useAIChatSession'
 
 /**
@@ -32,9 +32,21 @@ export function AIChatDrawer() {
         <section className="fixed bottom-36 right-5 z-40 flex h-[32rem] w-[min(24rem,calc(100vw-2.5rem))] flex-col rounded-lg border border-neutral-200 bg-white shadow-xl md:bottom-20">
           <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
             <strong>AI 챗봇</strong>
-            <button type="button" className="rounded p-1 hover:bg-neutral-100" onClick={() => setOpen(false)} aria-label="AI 챗봇 닫기">
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="rounded p-1 hover:bg-neutral-100 disabled:opacity-40"
+                onClick={clear}
+                disabled={messages.length === 0}
+                aria-label="새 세션"
+                title="새 세션"
+              >
+                <SquarePen className="h-4 w-4" />
+              </button>
+              <button type="button" className="rounded p-1 hover:bg-neutral-100" onClick={() => setOpen(false)} aria-label="AI 챗봇 닫기">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           {providerNotice && (
             <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800" role="status">
@@ -64,9 +76,6 @@ export function AIChatDrawer() {
             />
             <button type="submit" className="rounded bg-primary-600 p-2 text-white disabled:opacity-50" disabled={isSending} aria-label="메시지 보내기">
               <Send className="h-4 w-4" />
-            </button>
-            <button type="button" className="rounded border border-neutral-300 px-3 py-2 text-sm" onClick={clear} aria-label="대화 삭제">
-              삭제
             </button>
           </form>
         </section>

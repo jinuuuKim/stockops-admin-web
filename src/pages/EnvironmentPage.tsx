@@ -67,6 +67,11 @@ interface SensorFormState {
   location: string
   mqttTopic: string
   sourceChannel: string
+  // Threshold bounds are kept as raw input strings; empty means "unset" (null).
+  warnMin: string
+  warnMax: string
+  critMin: string
+  critMax: string
 }
 
 const INITIAL_SENSOR_FORM: SensorFormState = {
@@ -76,6 +81,21 @@ const INITIAL_SENSOR_FORM: SensorFormState = {
   location: '',
   mqttTopic: '',
   sourceChannel: '',
+  warnMin: '',
+  warnMax: '',
+  critMin: '',
+  critMax: '',
+}
+
+function parseThreshold(value: string): number | null {
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const parsed = Number(trimmed)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function thresholdToInput(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value)
 }
 
 const SENSOR_TOPIC_PATTERN = /^sensimul\/sites\/[^/]+\/sensors\/[^/]+$/
@@ -226,6 +246,10 @@ export function EnvironmentPage() {
       location: sensor.location,
       mqttTopic: sensor.mqttTopic,
       sourceChannel: sensor.sourceChannel,
+      warnMin: thresholdToInput(sensor.warnMin),
+      warnMax: thresholdToInput(sensor.warnMax),
+      critMin: thresholdToInput(sensor.critMin),
+      critMax: thresholdToInput(sensor.critMax),
     })
   }
 
@@ -242,11 +266,37 @@ export function EnvironmentPage() {
       return
     }
 
+    const warnMin = parseThreshold(sensorForm.warnMin)
+    const warnMax = parseThreshold(sensorForm.warnMax)
+    const critMin = parseThreshold(sensorForm.critMin)
+    const critMax = parseThreshold(sensorForm.critMax)
+    if (warnMin !== null && warnMax !== null && warnMin > warnMax) {
+      showErrorToast('경고 하한은 경고 상한보다 작아야 합니다.')
+      return
+    }
+    if (critMin !== null && critMax !== null && critMin > critMax) {
+      showErrorToast('위험 하한은 위험 상한보다 작아야 합니다.')
+      return
+    }
+
+    const payload = {
+      siteId: sensorForm.siteId,
+      sensorId: sensorForm.sensorId,
+      sensorType: sensorForm.sensorType,
+      location: sensorForm.location,
+      mqttTopic: sensorForm.mqttTopic,
+      sourceChannel: sensorForm.sourceChannel,
+      warnMin,
+      warnMax,
+      critMin,
+      critMax,
+    }
+
     try {
       const sensor =
         editingSensorId === null
-          ? await createSensorMutation.mutateAsync(sensorForm)
-          : await updateSensorMutation.mutateAsync({ id: editingSensorId, data: sensorForm })
+          ? await createSensorMutation.mutateAsync(payload)
+          : await updateSensorMutation.mutateAsync({ id: editingSensorId, data: payload })
       resetSensorForm()
       setSelectedSensorId(sensor.id)
     } catch {
@@ -598,6 +648,33 @@ export function EnvironmentPage() {
               onChange={(value) => setSensorForm((prev) => ({ ...prev, sourceChannel: value }))}
               placeholder="site-a"
             />
+            <div className="md:col-span-2">
+              <p className="mb-2 text-sm font-medium text-text-secondary">
+                임계값 (선택) · 비워두면 센서가 보고한 상태를 그대로 사용합니다
+              </p>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <ThresholdField
+                  label="경고 하한"
+                  value={sensorForm.warnMin}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, warnMin: value }))}
+                />
+                <ThresholdField
+                  label="경고 상한"
+                  value={sensorForm.warnMax}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, warnMax: value }))}
+                />
+                <ThresholdField
+                  label="위험 하한"
+                  value={sensorForm.critMin}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, critMin: value }))}
+                />
+                <ThresholdField
+                  label="위험 상한"
+                  value={sensorForm.critMax}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, critMax: value }))}
+                />
+              </div>
+            </div>
             <div className="md:col-span-2 flex justify-end">
               <div className="flex gap-2">
                 {editingSensorId !== null ? (
@@ -1184,6 +1261,30 @@ function InputField({
         placeholder={placeholder}
         disabled={disabled}
         className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+      />
+    </label>
+  )
+}
+
+function ThresholdField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+      <span>{label}</span>
+      <input
+        type="number"
+        step="any"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="-"
+        className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary"
       />
     </label>
   )
