@@ -13,6 +13,7 @@ import type {
   EnvironmentController,
   EnvironmentControllerRequest,
   PageResponse,
+  RecentSensorReadingsResponse,
   SensorAlert,
   SensorDevice,
   SensorDeviceRequest,
@@ -147,6 +148,21 @@ export async function getEnvironmentDashboard(): Promise<DashboardResponse> {
     warningCount: response.data?.warningCount ?? 0,
     dangerCount: response.data?.dangerCount ?? 0,
     latestReadings: Array.isArray(response.data?.latestReadings) ? response.data.latestReadings : [],
+  }
+}
+
+export async function getRecentSensorReadings(
+  sensorId: number,
+  minutes = 10,
+): Promise<RecentSensorReadingsResponse> {
+  const response = await api.get<RecentSensorReadingsResponse>(
+    `/v1/environment/sensors/${sensorId}/readings/recent`,
+    { params: { minutes } },
+  )
+  return {
+    sensorId: response.data?.sensorId ?? sensorId,
+    windowMinutes: response.data?.windowMinutes ?? minutes,
+    readings: Array.isArray(response.data?.readings) ? response.data.readings : [],
   }
 }
 

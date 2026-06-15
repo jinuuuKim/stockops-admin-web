@@ -66,6 +66,17 @@ function getNavItemsForRole(role: string | undefined): NavItem[] {
     case 'ROLE_ADMIN':
     case 'SYSTEM_ADMIN':
       return allNavItems
+    case 'GENERAL_ADMIN':
+      // 일반관리자: everything except super-admin-only settings
+      return allNavItems.filter(item => !['/settings'].includes(item.to))
+    case 'CENTER_MANAGER':
+      // 센터 관리자: own-center ops + warehouse registration; no settings/AI
+      return allNavItems.filter(item => !['/settings', '/ai'].includes(item.to))
+    case 'WAREHOUSE_MANAGER':
+      // 창고 관리자: warehouse ops only; no center/warehouse registration, settings, AI, reports
+      return allNavItems.filter(item =>
+        !['/settings', '/ai', '/centers', '/warehouses', '/products', '/reports'].includes(item.to)
+      )
     case 'MANAGER':
       return allNavItems.filter(item => !['/settings', '/ai'].includes(item.to))
     case 'OPERATOR':

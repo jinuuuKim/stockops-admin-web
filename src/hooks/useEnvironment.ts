@@ -19,6 +19,7 @@ import {
   getControllers,
   getEnvironmentAlerts,
   getEnvironmentDashboard,
+  getRecentSensorReadings,
   getSensorByExternalIds,
   getSensorById,
   getSensors,
@@ -32,6 +33,7 @@ import type {
   EnvironmentController,
   EnvironmentControllerRequest,
   PageResponse,
+  RecentSensorReadingsResponse,
   SensorAlert,
   SensorDevice,
   SensorDeviceRequest,
@@ -39,6 +41,7 @@ import type {
 
 const DASHBOARD_STALE_TIME = 30000
 const ALERTS_STALE_TIME = 30000
+const RECENT_READINGS_POLL_INTERVAL = 5000
 
 export function useEnvironmentDashboard(): UseQueryResult<DashboardResponse, AxiosError> {
   return useQuery({
@@ -93,6 +96,28 @@ export function useSensorByExternalIds(
       return getSensorByExternalIds(siteId, sensorId)
     },
     enabled: Boolean(siteId && sensorId),
+  })
+}
+
+/**
+ * Polls the selected sensor's recent cached readings from the API server
+ * while the environment page is open. Replaces the former direct browser
+ * MQTT subscription.
+ */
+export function useRecentSensorReadings(
+  sensorId: number | null,
+  minutes = 10,
+): UseQueryResult<RecentSensorReadingsResponse, AxiosError> {
+  return useQuery({
+    queryKey: ['environment', 'sensors', sensorId, 'readings', 'recent', minutes],
+    queryFn: () => {
+      if (sensorId === null) {
+        throw new Error('Sensor ID is required')
+      }
+      return getRecentSensorReadings(sensorId, minutes)
+    },
+    enabled: sensorId !== null,
+    refetchInterval: RECENT_READINGS_POLL_INTERVAL,
   })
 }
 

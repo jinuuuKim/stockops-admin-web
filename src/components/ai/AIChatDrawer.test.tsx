@@ -28,7 +28,7 @@ describe('AIChatDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: '메시지 보내기' }))
     expect(send).toHaveBeenCalledWith('재고 위험 알려줘')
 
-    fireEvent.click(screen.getByRole('button', { name: '대화 삭제' }))
+    fireEvent.click(screen.getByRole('button', { name: '새 세션' }))
     expect(clear).toHaveBeenCalled()
   })
 })

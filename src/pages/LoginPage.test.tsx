@@ -80,4 +80,26 @@ describe('LoginPage intended-route redirect', () => {
       password: 'password',
     })
   })
+
+  it('rejects store roles from the admin console without storing a session', async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { ...buildLoginResponse(), user: buildUser({ role: 'STORE_MANAGER' }) },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard" element={<div>dashboard page</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'store@stockops.test' } })
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'password' } })
+    fireEvent.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByText(/지점 계정은 관리자 웹에 접근할 수 없습니다/)).toBeInTheDocument()
+    expect(useAuthStore.getState().token).toBeNull()
+  })
 })

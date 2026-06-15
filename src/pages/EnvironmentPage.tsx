@@ -1,6 +1,8 @@
 /**
  * Environment monitoring page backed by live API data.
- * Replaces mock telemetry with dashboard, alert, history, sensor, and controller hooks.
+ * Live sensor values are served by the API server from its shared Redis
+ * recent-reading cache and refreshed by polling — the browser never connects
+ * to MQTT directly.
  *
  * @author StockOps Team
  * @since 1.0
@@ -28,20 +30,19 @@ import {
   useEnvironmentDashboard,
   useReactivateController,
   useReactivateSensor,
+  useRecentSensorReadings,
   useSensors,
   useUpdateController,
   useUpdateSensor,
   useControllers,
 } from '@/hooks/useEnvironment'
 import { useControllerCommand, useControllerCommands } from '@/hooks/useControllerCommand'
-import { useMqttSensorReadings } from '@/hooks/useMqttSensorReadings'
 import type { ConnectionStatus } from '@/hooks/useWebSocket'
 import type {
   AlertSeverity,
   ControllerCommand,
   ControllerStatus,
   ControllerType,
-  DashboardLatestReading,
   EnvironmentController,
   SensorAlert,
   SensorDevice,
@@ -66,6 +67,11 @@ interface SensorFormState {
   location: string
   mqttTopic: string
   sourceChannel: string
+  // Threshold bounds are kept as raw input strings; empty means "unset" (null).
+  warnMin: string
+  warnMax: string
+  critMin: string
+  critMax: string
 }
 
 const INITIAL_SENSOR_FORM: SensorFormState = {
@@ -75,6 +81,21 @@ const INITIAL_SENSOR_FORM: SensorFormState = {
   location: '',
   mqttTopic: '',
   sourceChannel: '',
+  warnMin: '',
+  warnMax: '',
+  critMin: '',
+  critMax: '',
+}
+
+function parseThreshold(value: string): number | null {
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const parsed = Number(trimmed)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function thresholdToInput(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value)
 }
 
 const SENSOR_TOPIC_PATTERN = /^sensimul\/sites\/[^/]+\/sensors\/[^/]+$/
@@ -138,69 +159,21 @@ export function EnvironmentPage() {
   const sensors = useMemo(() => sensorsQuery.data?.content ?? [], [sensorsQuery.data?.content])
   const controllers = useMemo(() => controllersQuery.data?.content ?? [], [controllersQuery.data?.content])
 
-  // admin-web subscribes to live sensor telemetry directly over MQTT (WebSocket transport)
-  // instead of overlaying API-server WebSocket events. No measurement persistence is required.
-  const mqttLive = useMqttSensorReadings({
-    url: import.meta.env.VITE_MQTT_WS_URL,
-    username: import.meta.env.VITE_MQTT_USERNAME,
-    password: import.meta.env.VITE_MQTT_PASSWORD,
-    topicFilter: import.meta.env.VITE_MQTT_SENSOR_TOPIC_FILTER || 'sensimul/sites/+/sensors/+',
-  })
-  const connectionStatus: ConnectionStatus =
-    mqttLive.connectionStatus === 'connected' ? 'connected'
-      : mqttLive.connectionStatus === 'connecting' ? 'connecting'
-        : mqttLive.connectionStatus === 'error' ? 'disconnected'
-          : 'fallback'
+  // Live sensor values are polled from the API server's Redis-backed recent-reading
+  // cache. The dashboard query (10s polling) carries the latest value per sensor and
+  // the recent readings query (5s polling) carries the selected sensor's window.
+  const latestReadings = dashboardQuery.data?.latestReadings ?? []
+  const recentReadingsQuery = useRecentSensorReadings(selectedSensorId)
+  const selectedSensor = useMemo(
+    () => sensors.find((sensor) => sensor.id === selectedSensorId) ?? null,
+    [sensors, selectedSensorId],
+  )
 
-  const [liveReadings, setLiveReadings] = useState<Map<number, DashboardLatestReading>>(new Map())
-  const [recentReadings, setRecentReadings] = useState<DashboardLatestReading[]>([])
-
-  const mqttLatestReadings = useMemo<DashboardLatestReading[]>(() => {
-    return sensors.flatMap((sensor) => {
-      const live = mqttLive.readings.get(`${sensor.siteId}/${sensor.sensorId}`)
-      if (!live) return []
-      const sensorType = typeof live.sensorType === 'string' ? null : (live.sensorType ?? null)
-      return [{
-        sensorId: sensor.id,
-        sensorName: sensor.name,
-        sensorType: sensorType ?? sensor.sensorType,
-        location: sensor.location,
-        value: live.value,
-        valueKind: live.valueKind ?? (typeof live.sensorType === 'string' ? live.sensorType : null),
-        unit: live.unit ?? inferUnitFromSensorType(sensor.sensorType),
-        status: live.status,
-        recordedAt: live.timestamp,
-      }]
-    })
-  }, [mqttLive.readings, sensors])
-
-  useEffect(() => {
-    if (mqttLatestReadings.length === 0) return
-    /* eslint-disable react-hooks/set-state-in-effect -- realtime MQTT readings update the live caches. */
-    setLiveReadings(() => {
-      const next = new Map<number, DashboardLatestReading>()
-      for (const reading of mqttLatestReadings) {
-        next.set(reading.sensorId, reading)
-      }
-      return next
-    })
-    setRecentReadings((current) => [...mqttLatestReadings, ...current].slice(0, 100))
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [mqttLatestReadings])
-
-  const mergedLatestReadings = useMemo(() => {
-    const base = dashboardQuery.data?.latestReadings ?? []
-    const liveMap = new Map(liveReadings)
-    const merged = base.map((reading) => {
-      const live = liveMap.get(reading.sensorId)
-      if (live) {
-        liveMap.delete(reading.sensorId)
-        return live
-      }
-      return reading
-    })
-    return merged.concat(Array.from(liveMap.values()))
-  }, [dashboardQuery.data?.latestReadings, liveReadings])
+  const connectionStatus: ConnectionStatus = dashboardQuery.isError
+    ? 'disconnected'
+    : dashboardQuery.isLoading
+      ? 'connecting'
+      : 'connected'
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -273,6 +246,10 @@ export function EnvironmentPage() {
       location: sensor.location,
       mqttTopic: sensor.mqttTopic,
       sourceChannel: sensor.sourceChannel,
+      warnMin: thresholdToInput(sensor.warnMin),
+      warnMax: thresholdToInput(sensor.warnMax),
+      critMin: thresholdToInput(sensor.critMin),
+      critMax: thresholdToInput(sensor.critMax),
     })
   }
 
@@ -289,11 +266,37 @@ export function EnvironmentPage() {
       return
     }
 
+    const warnMin = parseThreshold(sensorForm.warnMin)
+    const warnMax = parseThreshold(sensorForm.warnMax)
+    const critMin = parseThreshold(sensorForm.critMin)
+    const critMax = parseThreshold(sensorForm.critMax)
+    if (warnMin !== null && warnMax !== null && warnMin > warnMax) {
+      showErrorToast('경고 하한은 경고 상한보다 작아야 합니다.')
+      return
+    }
+    if (critMin !== null && critMax !== null && critMin > critMax) {
+      showErrorToast('위험 하한은 위험 상한보다 작아야 합니다.')
+      return
+    }
+
+    const payload = {
+      siteId: sensorForm.siteId,
+      sensorId: sensorForm.sensorId,
+      sensorType: sensorForm.sensorType,
+      location: sensorForm.location,
+      mqttTopic: sensorForm.mqttTopic,
+      sourceChannel: sensorForm.sourceChannel,
+      warnMin,
+      warnMax,
+      critMin,
+      critMax,
+    }
+
     try {
       const sensor =
         editingSensorId === null
-          ? await createSensorMutation.mutateAsync(sensorForm)
-          : await updateSensorMutation.mutateAsync({ id: editingSensorId, data: sensorForm })
+          ? await createSensorMutation.mutateAsync(payload)
+          : await updateSensorMutation.mutateAsync({ id: editingSensorId, data: payload })
       resetSensorForm()
       setSelectedSensorId(sensor.id)
     } catch {
@@ -488,8 +491,8 @@ export function EnvironmentPage() {
             <SectionLoading label="대시보드 집계 로딩 중" />
           ) : (
             <div className="space-y-3">
-              {mergedLatestReadings.length > 0 ? (
-                mergedLatestReadings.map((reading) => (
+              {latestReadings.length > 0 ? (
+                latestReadings.map((reading) => (
                   <button
                     key={reading.sensorId}
                     type="button"
@@ -645,6 +648,33 @@ export function EnvironmentPage() {
               onChange={(value) => setSensorForm((prev) => ({ ...prev, sourceChannel: value }))}
               placeholder="site-a"
             />
+            <div className="md:col-span-2">
+              <p className="mb-2 text-sm font-medium text-text-secondary">
+                임계값 (선택) · 비워두면 센서가 보고한 상태를 그대로 사용합니다
+              </p>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <ThresholdField
+                  label="경고 하한"
+                  value={sensorForm.warnMin}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, warnMin: value }))}
+                />
+                <ThresholdField
+                  label="경고 상한"
+                  value={sensorForm.warnMax}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, warnMax: value }))}
+                />
+                <ThresholdField
+                  label="위험 하한"
+                  value={sensorForm.critMin}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, critMin: value }))}
+                />
+                <ThresholdField
+                  label="위험 상한"
+                  value={sensorForm.critMax}
+                  onChange={(value) => setSensorForm((prev) => ({ ...prev, critMax: value }))}
+                />
+              </div>
+            </div>
             <div className="md:col-span-2 flex justify-end">
               <div className="flex gap-2">
                 {editingSensorId !== null ? (
@@ -747,26 +777,33 @@ export function EnvironmentPage() {
         </section>
 
         <section className="rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold">📡 실시간 센서 수신 (세션)</h2>
-          {recentReadings.length > 0 ? (
+          <h2 className="mb-4 text-lg font-semibold">
+            📡 최근 측정값{selectedSensor ? ` — ${selectedSensor.name}` : ''} (최근{' '}
+            {recentReadingsQuery.data?.windowMinutes ?? 10}분)
+          </h2>
+          {selectedSensorId === null ? (
+            <EmptyState message="측정값을 볼 센서를 선택해주세요." />
+          ) : recentReadingsQuery.isLoading ? (
+            <SectionLoading label="최근 측정값 로딩 중" />
+          ) : recentReadingsQuery.error ? (
+            <ErrorPanel title="최근 측정값을 불러오지 못했습니다." message={recentReadingsQuery.error.message} />
+          ) : (recentReadingsQuery.data?.readings.length ?? 0) > 0 ? (
             <div className="max-h-[520px] overflow-auto">
               <table className="w-full min-w-[520px]">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-sm text-text-secondary">
                     <th className="px-3 py-2">시각</th>
-                    <th className="px-3 py-2">센서</th>
                     <th className="px-3 py-2">값</th>
                     <th className="px-3 py-2">종류</th>
                     <th className="px-3 py-2">상태</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[...recentReadings]
+                  {[...(recentReadingsQuery.data?.readings ?? [])]
                     .sort((a, b) => (b.recordedAt ?? '').localeCompare(a.recordedAt ?? ''))
                     .map((row, index) => (
-                    <tr key={`${row.sensorId}-${row.recordedAt}-${index}`} className="border-b border-neutral-100">
+                    <tr key={`${row.recordedAt}-${row.sequenceId}-${index}`} className="border-b border-neutral-100">
                       <td className="px-3 py-2 text-sm text-text-secondary">{formatDateTime(row.recordedAt)}</td>
-                      <td className="px-3 py-2 text-sm text-text-secondary">{row.sensorName ?? row.sensorId}</td>
                       <td className="px-3 py-2 font-medium text-text-primary">
                         {formatReadingValue(row.value, row.unit)}
                       </td>
@@ -778,7 +815,7 @@ export function EnvironmentPage() {
               </table>
             </div>
           ) : (
-            <EmptyState message="MQTT 실시간 수신 데이터가 아직 없습니다. 브로커 연결 후 표시됩니다." />
+            <EmptyState message="최근 측정값이 없습니다. 센서가 송신을 시작하면 표시됩니다." />
           )}
         </section>
       </div>
@@ -1229,6 +1266,30 @@ function InputField({
   )
 }
 
+function ThresholdField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+      <span>{label}</span>
+      <input
+        type="number"
+        step="any"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="-"
+        className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary"
+      />
+    </label>
+  )
+}
+
 function formatDateTime(value: string | null | undefined): string {
   if (!value) {
     return '-'
@@ -1271,26 +1332,6 @@ function getUnitSymbol(unit: string | null | undefined): string {
   if (u === 'mg/m3' || u === 'mg/m³') return ' mg/m³'
 
   return ` ${unit}`
-}
-
-function inferUnitFromSensorType(sensorType: SensorType | null | undefined): string | null {
-  if (!sensorType) return null
-  switch (sensorType) {
-    case 'TEMPERATURE':
-      return 'celsius'
-    case 'HUMIDITY':
-      return 'percent'
-    case 'PRESSURE':
-      return 'hPa'
-    case 'AIR_QUALITY':
-      return 'μg/m³'
-    case 'CO2':
-      return 'ppm'
-    case 'TVOC':
-      return 'mg/m³'
-    default:
-      return null
-  }
 }
 
 function ConnectionStatusDot({ status }: { status: ConnectionStatus }) {

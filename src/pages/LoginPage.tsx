@@ -60,6 +60,12 @@ export function LoginPage() {
         throw new Error('No accessToken in response')
       }
 
+      // Store roles belong to the client-web ordering site, not the admin console.
+      if (user?.role === 'STORE_MANAGER' || user?.role === 'STORE_STAFF') {
+        setError('지점 계정은 관리자 웹에 접근할 수 없습니다. 발주 사이트를 이용해주세요.')
+        return
+      }
+
       login(accessToken, user)
 
       const redirectPath = getRedirectPath(location.state)

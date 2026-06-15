@@ -14,7 +14,16 @@ export interface PageRequest {
   size?: number
 }
 
-export type AdminRoleName = 'ADMIN' | 'MANAGER' | 'STAFF' | 'USER'
+export type AdminRoleName =
+  | 'ADMIN'
+  | 'GENERAL_ADMIN'
+  | 'CENTER_MANAGER'
+  | 'WAREHOUSE_MANAGER'
+  | 'STORE_MANAGER'
+  | 'STORE_STAFF'
+  | 'MANAGER'
+  | 'STAFF'
+  | 'USER'
 
 export interface AdminScopeAssignmentRequest {
   scope: ScopeType

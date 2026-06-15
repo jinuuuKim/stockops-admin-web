@@ -19,7 +19,16 @@ vi.mock('@/hooks/useAdmin', () => ({
   useDeleteAdminUser: vi.fn(),
 }))
 
+// The General/API tabs read live settings through react-query hooks; stub them so the
+// page renders without a QueryClientProvider (the test focuses on user/role management).
+vi.mock('@/hooks/useSettings', () => ({
+  useGeneralSettings: vi.fn(),
+  useIntegrations: vi.fn(),
+  useDownloadBackupExport: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
 import { useAdminRoles, useAdminUsers, useCreateAdminUser, useDeleteAdminUser, useUpdateAdminUser } from '@/hooks/useAdmin'
+import { useGeneralSettings, useIntegrations } from '@/hooks/useSettings'
 
 const createMutateAsync = vi.fn()
 const updateMutateAsync = vi.fn()
@@ -88,6 +97,38 @@ function buildUsersPage(users: AdminUser[], overrides: Partial<AdminPageResponse
   }
 }
 
+function buildGeneralSettings() {
+  return {
+    userCount: 12,
+    centerCount: 3,
+    warehouseCount: 8,
+    productCount: 240,
+    purchaseOrderCount: 57,
+    bedrockEnabled: true,
+    vertexEnabled: false,
+    geminiEnabled: false,
+    businessZone: 'Asia/Seoul',
+    activeProfile: 'prod',
+  }
+}
+
+function mockSettingsQueries() {
+  vi.mocked(useGeneralSettings).mockReturnValue({
+    data: buildGeneralSettings(),
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useGeneralSettings>)
+  vi.mocked(useIntegrations).mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useIntegrations>)
+}
+
 function mockUsersQuery(overrides: Record<string, unknown> = {}) {
   vi.mocked(useAdminUsers).mockReturnValue({
     data: buildUsersPage([buildUser()]),
@@ -128,6 +169,7 @@ function renderNotificationsTab() {
 describe('SettingsPage settings and permissions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSettingsQueries()
     mockUsersQuery()
     mockRolesQuery()
     vi.mocked(useCreateAdminUser).mockReturnValue({
@@ -145,12 +187,12 @@ describe('SettingsPage settings and permissions', () => {
     useAuthStore.setState({ token: 'test-token', user: buildAuthUser(), isRestoring: false, hasTriedRestore: true })
   })
 
-  it('shows an honest disabled state for unsupported general settings', () => {
+  it('renders read-only system info on the general tab from the settings API', () => {
     render(<SettingsPage />)
 
-    expect(screen.getByText('일반 설정 저장은 아직 지원하지 않습니다.')).toBeInTheDocument()
-    expect(screen.getByText(/`\/api\/v1\/settings` 또는 일반 설정 컨트롤러가 없어/)).toBeInTheDocument()
-    expect(screen.getByText('저장/초기화')).toBeInTheDocument()
+    expect(screen.getByText('일반 설정')).toBeInTheDocument()
+    expect(screen.getByText('마스터 데이터 현황')).toBeInTheDocument()
+    // The general tab is read-only system info, so there is no save control.
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   })
 
@@ -192,6 +234,7 @@ describe('SettingsPage settings and permissions', () => {
 describe('SettingsPage user management', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSettingsQueries()
     mockUsersQuery()
     mockRolesQuery()
     vi.mocked(useCreateAdminUser).mockReturnValue({
