@@ -5,6 +5,7 @@ import { getAdminErrorMessage } from '@/api/admin'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import {
   useAdminNotices,
+  useAdminRoles,
   useCreateAdminNotice,
   useDeleteAdminNotice,
   useUpdateAdminNotice,
@@ -28,6 +29,7 @@ interface NoticeFormData {
   active: boolean
   publishStart: string
   publishEnd: string
+  targetRoles: string[]
 }
 
 const EMPTY_FORM: NoticeFormData = {
@@ -37,6 +39,7 @@ const EMPTY_FORM: NoticeFormData = {
   active: true,
   publishStart: '',
   publishEnd: '',
+  targetRoles: [],
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -70,6 +73,7 @@ function buildFormFromNotice(notice: AdminNotice): NoticeFormData {
     active: notice.active,
     publishStart: formatDateTimeLocal(notice.noticeAt),
     publishEnd: '',
+    targetRoles: notice.targetRoles ?? [],
   }
 }
 
@@ -83,6 +87,17 @@ export function NoticeManagement() {
   const [formData, setFormData] = useState<NoticeFormData>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [mutationError, setMutationError] = useState('')
+
+  const { data: roles = [] } = useAdminRoles()
+
+  const toggleTargetRole = (role: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetRoles: prev.targetRoles.includes(role)
+        ? prev.targetRoles.filter((r) => r !== role)
+        : [...prev.targetRoles, role],
+    }))
+  }
 
   const noticeFilter = useMemo(
     () => ({
@@ -155,6 +170,7 @@ export function NoticeManagement() {
       type: formData.type,
       active: formData.active,
       noticeAt: toIsoDateTime(formData.publishStart),
+      targetRoles: formData.targetRoles,
     }
 
     try {
@@ -446,6 +462,23 @@ export function NoticeManagement() {
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg"
                   />
                   <p className="mt-1 text-xs text-neutral-500">종료일은 현재 API 저장 필드가 없어 유효성 검증에만 사용됩니다.</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">대상 역할 (Teams 발송)</label>
+                <p className="mb-2 text-xs text-neutral-500">선택한 역할의 채널로 발송됩니다. 선택하지 않으면 모든 역할 채널로 발송됩니다.</p>
+                <div className="flex flex-wrap gap-3">
+                  {roles.map((role) => (
+                    <label key={role.id} className="flex items-center gap-2 text-sm text-neutral-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.targetRoles.includes(role.name)}
+                        onChange={() => toggleTargetRole(role.name)}
+                        className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      {role.name}
+                    </label>
+                  ))}
                 </div>
               </div>
               <div className="flex gap-3 justify-end">
