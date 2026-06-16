@@ -35,6 +35,7 @@ const EnvironmentPage = lazyPage(() => import('@/pages/EnvironmentPage'), 'Envir
 const EnvironmentAlertsPage = lazyPage(() => import('@/pages/EnvironmentAlertsPage'), 'EnvironmentAlertsPage')
 const ReportsPage = lazyPage(() => import('@/pages/ReportsPage'), 'ReportsPage')
 const AIFeaturesPage = lazyPage(() => import('@/pages/AIFeaturesPage'), 'AIFeaturesPage')
+const IntradayProposalsPage = lazyPage(() => import('@/pages/IntradayProposalsPage'), 'IntradayProposalsPage')
 const StockAdjustmentPage = lazyPage(() => import('@/pages/StockAdjustmentPage'), 'StockAdjustmentPage')
 const AdminPage = lazyPage(() => import('@/pages/admin/AdminPage'), 'AdminPage')
 const NoticeManagement = lazyPage(() => import('@/pages/admin/NoticeManagement'), 'NoticeManagement')
@@ -118,6 +119,7 @@ function App() {
           <Route path="environment/alerts" element={routeElement(<EnvironmentAlertsPage />)} />
           <Route path="reports" element={routeElement(<ReportsPage />)} />
           <Route path="ai" element={routeElement(<AIFeaturesPage />)} />
+          <Route path="ai/intraday-proposals" element={routeElement(<IntradayProposalsPage />)} />
           <Route path="ai/chat" element={routeElement(<AiChatPage />)} />
           <Route path="admin" element={routeElement(<AdminPage />)} />
           <Route path="admin/notices" element={routeElement(<NoticeManagement />)} />

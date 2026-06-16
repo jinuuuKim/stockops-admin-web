@@ -8,6 +8,8 @@ vi.mock('@/hooks/useAdmin', () => ({
   useCreateAdminNotice: vi.fn(),
   useUpdateAdminNotice: vi.fn(),
   useDeleteAdminNotice: vi.fn(),
+  // NoticeManagement reads useAdminRoles() for the audience/role selector; stub a safe default.
+  useAdminRoles: vi.fn(() => ({ data: [] })),
 }))
 
 import {
@@ -137,6 +139,7 @@ describe('NoticeManagement', () => {
         type: 'UPDATE',
         active: false,
         noticeAt: new Date('2026-06-05T09:00').toISOString(),
+        targetRoles: [],
       })
     })
   })

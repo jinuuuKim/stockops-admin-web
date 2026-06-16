@@ -47,6 +47,7 @@ const allNavItems: NavItem[] = [
   { to: '/notifications', label: '알림 센터', icon: Bell },
   { to: '/reports', label: '리포트', icon: BarChart3 },
   { to: '/ai', label: 'AI 발주 추천', icon: Brain },
+  { to: '/ai/intraday-proposals', label: '인트라데이 예측', icon: Clock },
   { to: '/settings', label: '설정', icon: Settings },
 ]
 
@@ -71,17 +72,17 @@ function getNavItemsForRole(role: string | undefined): NavItem[] {
       return allNavItems.filter(item => !['/settings'].includes(item.to))
     case 'CENTER_MANAGER':
       // 센터 관리자: own-center ops + warehouse registration; no settings/AI
-      return allNavItems.filter(item => !['/settings', '/ai'].includes(item.to))
+      return allNavItems.filter(item => !['/settings', '/ai', '/ai/intraday-proposals'].includes(item.to))
     case 'WAREHOUSE_MANAGER':
       // 창고 관리자: warehouse ops only; no center/warehouse registration, settings, AI, reports
       return allNavItems.filter(item =>
-        !['/settings', '/ai', '/centers', '/warehouses', '/products', '/reports'].includes(item.to)
+        !['/settings', '/ai', '/ai/intraday-proposals', '/centers', '/warehouses', '/products', '/reports'].includes(item.to)
       )
     case 'MANAGER':
-      return allNavItems.filter(item => !['/settings', '/ai'].includes(item.to))
+      return allNavItems.filter(item => !['/settings', '/ai', '/ai/intraday-proposals'].includes(item.to))
     case 'OPERATOR':
       return allNavItems.filter(item =>
-        !['/settings', '/ai', '/centers', '/warehouses', '/products', '/reports'].includes(item.to)
+        !['/settings', '/ai', '/ai/intraday-proposals', '/centers', '/warehouses', '/products', '/reports'].includes(item.to)
       )
     default:
       return allNavItems
