@@ -74,6 +74,7 @@ export interface AdminNotice {
   active: boolean
   createdBy: number | null
   noticeAt: string | null
+  targetRoles?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -85,6 +86,8 @@ export interface CreateNoticeRequest {
   active?: boolean
   createdBy?: number | null
   noticeAt?: string | null
+  // Roles this notice is delivered to (Teams routing). Empty = broadcast to all role channels.
+  targetRoles?: string[]
 }
 
 export interface UpdateNoticeRequest {

@@ -49,7 +49,8 @@ export interface SensorDevice {
   siteId: string
   sensorId: string
   sensorType: SensorType
-  location: string
+  warehouseId: number | null
+  warehouseName: string | null
   mqttTopic: string
   sourceChannel: string
   active: boolean
@@ -66,7 +67,7 @@ export interface SensorDeviceRequest {
   siteId: string
   sensorId: string
   sensorType: SensorType
-  location: string
+  warehouseId: number
   mqttTopic: string
   sourceChannel: string
   warnMin: number | null
@@ -85,6 +86,8 @@ export interface EnvironmentController {
   status: ControllerStatus
   outputLevel: number
   mqttTopic: string
+  warehouseId: number | null
+  warehouseName: string | null
   active: boolean
   deleted: boolean
   createdAt: string
@@ -98,13 +101,14 @@ export interface EnvironmentControllerRequest {
   controllerType: ControllerType
   status: ControllerStatus
   outputLevel: number
+  warehouseId: number
 }
 
 export interface DashboardLatestReading {
   sensorId: number
   sensorName: string | null
   sensorType: SensorType | null
-  location: string | null
+  warehouseName: string | null
   value: number | null
   valueKind: string | null
   unit: string | null

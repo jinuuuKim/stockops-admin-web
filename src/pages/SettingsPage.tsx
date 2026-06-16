@@ -680,6 +680,24 @@ function NotificationsSettings() {
           </button>
         </div>
       </div>
+
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-medium text-blue-900">역할 채널 (공지/전체알림)</h3>
+            <p className="text-sm text-blue-700 mt-1">
+              역할을 Teams 채널에 매핑하면 공지/전체알림이 대상 역할의 채널로 발송됩니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/settings/role-channels')}
+            className="px-4 py-2 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            역할 채널 관리
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

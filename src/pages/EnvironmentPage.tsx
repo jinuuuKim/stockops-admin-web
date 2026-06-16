@@ -37,6 +37,7 @@ import {
   useControllers,
 } from '@/hooks/useEnvironment'
 import { useControllerCommand, useControllerCommands } from '@/hooks/useControllerCommand'
+import { useWarehouses } from '@/hooks/useWarehouse'
 import type { ConnectionStatus } from '@/hooks/useWebSocket'
 import type {
   AlertSeverity,
@@ -64,7 +65,7 @@ interface SensorFormState {
   siteId: string
   sensorId: string
   sensorType: SensorType
-  location: string
+  warehouseId: number | null
   mqttTopic: string
   sourceChannel: string
   // Threshold bounds are kept as raw input strings; empty means "unset" (null).
@@ -78,7 +79,7 @@ const INITIAL_SENSOR_FORM: SensorFormState = {
   siteId: '',
   sensorId: '',
   sensorType: 'TEMPERATURE',
-  location: '',
+  warehouseId: null,
   mqttTopic: '',
   sourceChannel: '',
   warnMin: '',
@@ -118,6 +119,7 @@ interface ControllerFormState {
   controllerType: ControllerType
   status: ControllerStatus
   outputLevel: number
+  warehouseId: number | null
 }
 
 const INITIAL_CONTROLLER_FORM: ControllerFormState = {
@@ -127,6 +129,7 @@ const INITIAL_CONTROLLER_FORM: ControllerFormState = {
   controllerType: 'COOLING',
   status: 'INACTIVE',
   outputLevel: 0,
+  warehouseId: null,
 }
 
 function buildSensorTopic(siteId: string, sensorId: string): string {
@@ -155,6 +158,8 @@ export function EnvironmentPage() {
   const alertsQuery = useEnvironmentAlerts(30)
   const sensorsQuery = useSensors(0, 100)
   const controllersQuery = useControllers(0, 100)
+  const warehousesQuery = useWarehouses()
+  const warehouses = warehousesQuery.data ?? []
 
   const sensors = useMemo(() => sensorsQuery.data?.content ?? [], [sensorsQuery.data?.content])
   const controllers = useMemo(() => controllersQuery.data?.content ?? [], [controllersQuery.data?.content])
@@ -243,7 +248,7 @@ export function EnvironmentPage() {
       siteId: sensor.siteId,
       sensorId: sensor.sensorId,
       sensorType: sensor.sensorType,
-      location: sensor.location,
+      warehouseId: sensor.warehouseId,
       mqttTopic: sensor.mqttTopic,
       sourceChannel: sensor.sourceChannel,
       warnMin: thresholdToInput(sensor.warnMin),
@@ -266,6 +271,12 @@ export function EnvironmentPage() {
       return
     }
 
+    const warehouseId = sensorForm.warehouseId
+    if (warehouseId === null) {
+      showErrorToast('센서가 설치된 창고를 선택해주세요.')
+      return
+    }
+
     const warnMin = parseThreshold(sensorForm.warnMin)
     const warnMax = parseThreshold(sensorForm.warnMax)
     const critMin = parseThreshold(sensorForm.critMin)
@@ -283,7 +294,7 @@ export function EnvironmentPage() {
       siteId: sensorForm.siteId,
       sensorId: sensorForm.sensorId,
       sensorType: sensorForm.sensorType,
-      location: sensorForm.location,
+      warehouseId,
       mqttTopic: sensorForm.mqttTopic,
       sourceChannel: sensorForm.sourceChannel,
       warnMin,
@@ -347,6 +358,7 @@ export function EnvironmentPage() {
       controllerType: controller.controllerType,
       status: controller.status,
       outputLevel: controller.outputLevel,
+      warehouseId: controller.warehouseId ?? null,
     })
   }
 
@@ -365,12 +377,19 @@ export function EnvironmentPage() {
       showErrorToast('제어기 이름을 입력해주세요.')
       return
     }
+    const warehouseId = controllerForm.warehouseId
+    if (warehouseId === null) {
+      showErrorToast('제어기가 설치된 창고를 선택해주세요.')
+      return
+    }
+
+    const payload = { ...controllerForm, warehouseId }
 
     try {
       const controller =
         editingControllerId === null
-          ? await createControllerMutation.mutateAsync(controllerForm)
-          : await updateControllerMutation.mutateAsync({ id: editingControllerId, data: controllerForm })
+          ? await createControllerMutation.mutateAsync(payload)
+          : await updateControllerMutation.mutateAsync({ id: editingControllerId, data: payload })
       resetControllerForm()
       setSelectedControllerId(controller.id)
     } catch {
@@ -486,11 +505,16 @@ export function EnvironmentPage() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section className="rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold">📈 최신 센서 요약</h2>
+          <h2 className="mb-4 text-lg font-semibold">
+            📈 최신 센서 요약
+            {latestReadings.length > 0 ? (
+              <span className="ml-2 text-sm font-normal text-text-light">{latestReadings.length}개</span>
+            ) : null}
+          </h2>
           {dashboardQuery.isLoading ? (
             <SectionLoading label="대시보드 집계 로딩 중" />
           ) : (
-            <div className="space-y-3">
+            <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
               {latestReadings.length > 0 ? (
                 latestReadings.map((reading) => (
                   <button
@@ -498,13 +522,13 @@ export function EnvironmentPage() {
                     type="button"
                     onClick={() => setSelectedSensorId(reading.sensorId)}
                     className={`flex w-full items-start justify-between rounded-lg border px-4 py-3 text-left hover:bg-neutral-50 ${
-                      selectedSensorId === reading.sensorId ? 'border-primary bg-primary/5' : 'border-neutral-200'
+                      selectedSensorId === reading.sensorId ? 'border-primary-500 bg-primary-50' : 'border-neutral-200'
                     }`}
                   >
                     <div>
                       <p className="font-medium text-text-primary">{reading.sensorName ?? `센서 #${reading.sensorId}`}</p>
                       <p className="text-sm text-text-secondary">
-                        {reading.location ?? '위치 미지정'} · {reading.sensorType ?? '유형 미지정'}
+                        {reading.warehouseName ?? '창고 미지정'} · {reading.sensorType ?? '유형 미지정'}
                       </p>
                     </div>
                     <div className="text-right">
@@ -529,7 +553,7 @@ export function EnvironmentPage() {
           ) : alertsQuery.error ? (
             <ErrorPanel title="알림을 불러오지 못했습니다." message={alertsQuery.error.message} />
           ) : (alertsQuery.data?.length ?? 0) > 0 ? (
-            <div className="space-y-3">
+            <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
               {alertsQuery.data?.map((alert) => (
                 <div key={alert.id} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -556,7 +580,10 @@ export function EnvironmentPage() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section className="rounded-xl border border-neutral-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold">📍 센서 관리</h2>
+            <h2 className="text-lg font-semibold">
+              📍 센서 관리
+              <span className="ml-2 text-sm font-normal text-text-light">{sensors.length}개</span>
+            </h2>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {editingSensorId !== null ? (
                 <button
@@ -574,7 +601,7 @@ export function EnvironmentPage() {
                     void handleReactivateLastSensor()
                   }}
                   disabled={reactivateSensorMutation.isPending}
-                  className="rounded-lg border border-primary px-3 py-2 text-sm text-primary hover:bg-primary/5 disabled:opacity-60"
+                  className="rounded-lg border border-primary-500 px-3 py-2 text-sm text-primary-600 transition-colors hover:bg-primary-50 disabled:opacity-60"
                 >
                   최근 삭제 센서 복구
                 </button>
@@ -616,7 +643,7 @@ export function EnvironmentPage() {
                 onChange={(event) =>
                   setSensorForm((prev) => ({ ...prev, sensorType: event.target.value as SensorType }))
                 }
-                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary"
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
               >
                 {SENSOR_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -625,12 +652,26 @@ export function EnvironmentPage() {
                 ))}
               </select>
             </label>
-            <InputField
-              label="Location"
-              value={sensorForm.location}
-              onChange={(value) => setSensorForm((prev) => ({ ...prev, location: value }))}
-              placeholder="냉장고 A"
-            />
+            <label className="flex flex-col gap-2 text-sm text-text-secondary">
+              <span>창고</span>
+              <select
+                value={sensorForm.warehouseId ?? ''}
+                onChange={(event) =>
+                  setSensorForm((prev) => ({
+                    ...prev,
+                    warehouseId: event.target.value === '' ? null : Number(event.target.value),
+                  }))
+                }
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+              >
+                <option value="">창고 선택</option>
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="md:col-span-2">
               <InputField
                 label="MQTT Topic"
@@ -689,7 +730,7 @@ export function EnvironmentPage() {
                 <button
                   type="submit"
                   disabled={createSensorMutation.isPending || updateSensorMutation.isPending}
-                  className="rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90 disabled:opacity-60"
+                  className="rounded-lg bg-primary-600 px-4 py-2 text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
                 >
                   {createSensorMutation.isPending || updateSensorMutation.isPending
                     ? editingSensorId === null
@@ -712,12 +753,12 @@ export function EnvironmentPage() {
               <ErrorPanel title="센서 목록을 불러오지 못했습니다." message={sensorsQuery.error.message} />
             </div>
           ) : (
-            <div className="mt-6 overflow-x-auto">
+            <div className="mt-6 max-h-[420px] overflow-auto rounded-lg border border-neutral-200">
               <table className="w-full min-w-[640px]">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-neutral-50">
                   <tr className="border-b border-neutral-200 text-left text-sm text-text-secondary">
                     <th className="px-3 py-2">센서</th>
-                    <th className="px-3 py-2">위치</th>
+                    <th className="px-3 py-2">창고</th>
                     <th className="px-3 py-2">유형</th>
                     <th className="px-3 py-2">상태</th>
                     <th className="px-3 py-2">관리</th>
@@ -738,10 +779,14 @@ export function EnvironmentPage() {
                           </div>
                         </button>
                       </td>
-                      <td className="px-3 py-3 text-sm text-text-secondary">{sensor.location}</td>
+                      <td className="px-3 py-3 text-sm text-text-secondary">{sensor.warehouseName ?? '미지정'}</td>
                       <td className="px-3 py-3 text-sm text-text-secondary">{sensor.sensorType}</td>
                       <td className="px-3 py-3">
-                        <span className="rounded-full bg-success/10 px-2 py-1 text-xs text-success">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${
+                            sensor.active ? 'bg-success/10 text-success' : 'bg-neutral-200 text-text-secondary'
+                          }`}
+                        >
                           {sensor.active ? 'ACTIVE' : 'INACTIVE'}
                         </span>
                       </td>
@@ -788,9 +833,9 @@ export function EnvironmentPage() {
           ) : recentReadingsQuery.error ? (
             <ErrorPanel title="최근 측정값을 불러오지 못했습니다." message={recentReadingsQuery.error.message} />
           ) : (recentReadingsQuery.data?.readings.length ?? 0) > 0 ? (
-            <div className="max-h-[520px] overflow-auto">
+            <div className="max-h-[420px] overflow-auto rounded-lg border border-neutral-200">
               <table className="w-full min-w-[520px]">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-neutral-50">
                   <tr className="border-b border-neutral-200 text-left text-sm text-text-secondary">
                     <th className="px-3 py-2">시각</th>
                     <th className="px-3 py-2">값</th>
@@ -823,7 +868,10 @@ export function EnvironmentPage() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-xl border border-neutral-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold">🎛️ 제어기 관리</h2>
+            <h2 className="text-lg font-semibold">
+              🎛️ 제어기 관리
+              <span className="ml-2 text-sm font-normal text-text-light">{controllers.length}개</span>
+            </h2>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {editingControllerId !== null ? (
                 <button
@@ -841,7 +889,7 @@ export function EnvironmentPage() {
                     void handleReactivateLastController()
                   }}
                   disabled={reactivateControllerMutation.isPending}
-                  className="rounded-lg border border-primary px-3 py-2 text-sm text-primary hover:bg-primary/5 disabled:opacity-60"
+                  className="rounded-lg border border-primary-500 px-3 py-2 text-sm text-primary-600 transition-colors hover:bg-primary-50 disabled:opacity-60"
                 >
                   최근 삭제 제어기 복구
                 </button>
@@ -876,7 +924,7 @@ export function EnvironmentPage() {
                 onChange={(event) =>
                   setControllerForm((prev) => ({ ...prev, controllerType: event.target.value as ControllerType }))
                 }
-                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary"
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
               >
                 {CONTROLLER_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -892,11 +940,31 @@ export function EnvironmentPage() {
                 onChange={(event) =>
                   setControllerForm((prev) => ({ ...prev, status: event.target.value as ControllerStatus }))
                 }
-                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary"
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
               >
                 {CONTROLLER_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 text-sm text-text-secondary">
+              <span>창고</span>
+              <select
+                value={controllerForm.warehouseId ?? ''}
+                onChange={(event) =>
+                  setControllerForm((prev) => ({
+                    ...prev,
+                    warehouseId: event.target.value === '' ? null : Number(event.target.value),
+                  }))
+                }
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+              >
+                <option value="">창고 선택</option>
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
                   </option>
                 ))}
               </select>
@@ -910,7 +978,7 @@ export function EnvironmentPage() {
                 step={1}
                 value={controllerForm.outputLevel}
                 onChange={(event) => setControllerForm((prev) => ({ ...prev, outputLevel: Number(event.target.value) }))}
-                className="w-full accent-primary"
+                className="w-full accent-primary-600"
               />
             </div>
             <div className="md:col-span-2 flex justify-end">
@@ -927,7 +995,7 @@ export function EnvironmentPage() {
                 <button
                   type="submit"
                   disabled={createControllerMutation.isPending || updateControllerMutation.isPending}
-                  className="rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90 disabled:opacity-60"
+                  className="rounded-lg bg-primary-600 px-4 py-2 text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
                 >
                   {createControllerMutation.isPending || updateControllerMutation.isPending
                     ? editingControllerId === null
@@ -950,9 +1018,9 @@ export function EnvironmentPage() {
               <ErrorPanel title="제어기 목록을 불러오지 못했습니다." message={controllersQuery.error.message} />
             </div>
           ) : (
-            <div className="mt-6 overflow-x-auto">
+            <div className="mt-6 max-h-[420px] overflow-auto rounded-lg border border-neutral-200">
               <table className="w-full min-w-[700px]">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-neutral-50">
                   <tr className="border-b border-neutral-200 text-left text-sm text-text-secondary">
                     <th className="px-3 py-2">제어기</th>
                     <th className="px-3 py-2">유형</th>
@@ -1084,7 +1152,7 @@ export function EnvironmentPage() {
                     step={1}
                     value={controllerOutputLevel}
                     onChange={(event) => setControllerOutputLevel(Number(event.target.value))}
-                    className="w-full accent-primary"
+                    className="w-full accent-primary-600"
                   />
                 </div>
               </div>
@@ -1096,7 +1164,7 @@ export function EnvironmentPage() {
                 ) : commandHistoryQuery.error ? (
                   <ErrorPanel title="명령 이력을 불러오지 못했습니다." message={commandHistoryQuery.error.message} />
                 ) : (commandHistoryQuery.data?.length ?? 0) > 0 ? (
-                  <div className="max-h-[400px] space-y-3 overflow-auto">
+                  <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                     {commandHistoryQuery.data?.map((command) => (
                       <CommandHistoryItem key={command.id} command={command} />
                     ))}
@@ -1260,7 +1328,7 @@ function InputField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60"
       />
     </label>
   )
@@ -1284,7 +1352,7 @@ function ThresholdField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="-"
-        className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary"
+        className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
       />
     </label>
   )

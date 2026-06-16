@@ -46,6 +46,10 @@ const NotificationChannelPage = lazyPage(
   () => import('@/pages/settings/NotificationChannelPage'),
   'NotificationChannelPage'
 )
+const RoleWebhookConfigPage = lazyPage(
+  () => import('@/pages/settings/RoleWebhookConfigPage'),
+  'RoleWebhookConfigPage'
+)
 const CycleCountPage = lazyPage(() => import('@/pages/CycleCountPage'), 'CycleCountPage')
 const NotificationsPage = lazyPage(() => import('@/pages/NotificationsPage'), 'NotificationsPage')
 const InventoryTransferPage = lazyPage(() => import('@/pages/InventoryTransferPage'), 'InventoryTransferPage')
@@ -109,6 +113,7 @@ function App() {
           <Route path="settings" element={routeElement(<SettingsPage />)} />
           <Route path="settings/escalation" element={routeElement(<EscalationPolicyPage />)} />
           <Route path="settings/notification-channels" element={routeElement(<NotificationChannelPage />)} />
+          <Route path="settings/role-channels" element={routeElement(<RoleWebhookConfigPage />)} />
           <Route path="environment" element={routeElement(<EnvironmentPage />)} />
           <Route path="environment/alerts" element={routeElement(<EnvironmentAlertsPage />)} />
           <Route path="reports" element={routeElement(<ReportsPage />)} />
