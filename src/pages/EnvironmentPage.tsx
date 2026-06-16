@@ -37,6 +37,7 @@ import {
   useControllers,
 } from '@/hooks/useEnvironment'
 import { useControllerCommand, useControllerCommands } from '@/hooks/useControllerCommand'
+import { useWarehouses } from '@/hooks/useWarehouse'
 import type { ConnectionStatus } from '@/hooks/useWebSocket'
 import type {
   AlertSeverity,
@@ -64,7 +65,7 @@ interface SensorFormState {
   siteId: string
   sensorId: string
   sensorType: SensorType
-  location: string
+  warehouseId: number | null
   mqttTopic: string
   sourceChannel: string
   // Threshold bounds are kept as raw input strings; empty means "unset" (null).
@@ -78,7 +79,7 @@ const INITIAL_SENSOR_FORM: SensorFormState = {
   siteId: '',
   sensorId: '',
   sensorType: 'TEMPERATURE',
-  location: '',
+  warehouseId: null,
   mqttTopic: '',
   sourceChannel: '',
   warnMin: '',
@@ -118,6 +119,7 @@ interface ControllerFormState {
   controllerType: ControllerType
   status: ControllerStatus
   outputLevel: number
+  warehouseId: number | null
 }
 
 const INITIAL_CONTROLLER_FORM: ControllerFormState = {
@@ -127,6 +129,7 @@ const INITIAL_CONTROLLER_FORM: ControllerFormState = {
   controllerType: 'COOLING',
   status: 'INACTIVE',
   outputLevel: 0,
+  warehouseId: null,
 }
 
 function buildSensorTopic(siteId: string, sensorId: string): string {
@@ -155,6 +158,8 @@ export function EnvironmentPage() {
   const alertsQuery = useEnvironmentAlerts(30)
   const sensorsQuery = useSensors(0, 100)
   const controllersQuery = useControllers(0, 100)
+  const warehousesQuery = useWarehouses()
+  const warehouses = warehousesQuery.data ?? []
 
   const sensors = useMemo(() => sensorsQuery.data?.content ?? [], [sensorsQuery.data?.content])
   const controllers = useMemo(() => controllersQuery.data?.content ?? [], [controllersQuery.data?.content])
@@ -243,7 +248,7 @@ export function EnvironmentPage() {
       siteId: sensor.siteId,
       sensorId: sensor.sensorId,
       sensorType: sensor.sensorType,
-      location: sensor.location,
+      warehouseId: sensor.warehouseId,
       mqttTopic: sensor.mqttTopic,
       sourceChannel: sensor.sourceChannel,
       warnMin: thresholdToInput(sensor.warnMin),
@@ -266,6 +271,12 @@ export function EnvironmentPage() {
       return
     }
 
+    const warehouseId = sensorForm.warehouseId
+    if (warehouseId === null) {
+      showErrorToast('센서가 설치된 창고를 선택해주세요.')
+      return
+    }
+
     const warnMin = parseThreshold(sensorForm.warnMin)
     const warnMax = parseThreshold(sensorForm.warnMax)
     const critMin = parseThreshold(sensorForm.critMin)
@@ -283,7 +294,7 @@ export function EnvironmentPage() {
       siteId: sensorForm.siteId,
       sensorId: sensorForm.sensorId,
       sensorType: sensorForm.sensorType,
-      location: sensorForm.location,
+      warehouseId,
       mqttTopic: sensorForm.mqttTopic,
       sourceChannel: sensorForm.sourceChannel,
       warnMin,
@@ -347,6 +358,7 @@ export function EnvironmentPage() {
       controllerType: controller.controllerType,
       status: controller.status,
       outputLevel: controller.outputLevel,
+      warehouseId: controller.warehouseId ?? null,
     })
   }
 
@@ -365,12 +377,19 @@ export function EnvironmentPage() {
       showErrorToast('제어기 이름을 입력해주세요.')
       return
     }
+    const warehouseId = controllerForm.warehouseId
+    if (warehouseId === null) {
+      showErrorToast('제어기가 설치된 창고를 선택해주세요.')
+      return
+    }
+
+    const payload = { ...controllerForm, warehouseId }
 
     try {
       const controller =
         editingControllerId === null
-          ? await createControllerMutation.mutateAsync(controllerForm)
-          : await updateControllerMutation.mutateAsync({ id: editingControllerId, data: controllerForm })
+          ? await createControllerMutation.mutateAsync(payload)
+          : await updateControllerMutation.mutateAsync({ id: editingControllerId, data: payload })
       resetControllerForm()
       setSelectedControllerId(controller.id)
     } catch {
@@ -509,7 +528,7 @@ export function EnvironmentPage() {
                     <div>
                       <p className="font-medium text-text-primary">{reading.sensorName ?? `센서 #${reading.sensorId}`}</p>
                       <p className="text-sm text-text-secondary">
-                        {reading.location ?? '위치 미지정'} · {reading.sensorType ?? '유형 미지정'}
+                        {reading.warehouseName ?? '창고 미지정'} · {reading.sensorType ?? '유형 미지정'}
                       </p>
                     </div>
                     <div className="text-right">
@@ -633,12 +652,26 @@ export function EnvironmentPage() {
                 ))}
               </select>
             </label>
-            <InputField
-              label="Location"
-              value={sensorForm.location}
-              onChange={(value) => setSensorForm((prev) => ({ ...prev, location: value }))}
-              placeholder="냉장고 A"
-            />
+            <label className="flex flex-col gap-2 text-sm text-text-secondary">
+              <span>창고</span>
+              <select
+                value={sensorForm.warehouseId ?? ''}
+                onChange={(event) =>
+                  setSensorForm((prev) => ({
+                    ...prev,
+                    warehouseId: event.target.value === '' ? null : Number(event.target.value),
+                  }))
+                }
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+              >
+                <option value="">창고 선택</option>
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="md:col-span-2">
               <InputField
                 label="MQTT Topic"
@@ -725,7 +758,7 @@ export function EnvironmentPage() {
                 <thead className="sticky top-0 z-10 bg-neutral-50">
                   <tr className="border-b border-neutral-200 text-left text-sm text-text-secondary">
                     <th className="px-3 py-2">센서</th>
-                    <th className="px-3 py-2">위치</th>
+                    <th className="px-3 py-2">창고</th>
                     <th className="px-3 py-2">유형</th>
                     <th className="px-3 py-2">상태</th>
                     <th className="px-3 py-2">관리</th>
@@ -746,7 +779,7 @@ export function EnvironmentPage() {
                           </div>
                         </button>
                       </td>
-                      <td className="px-3 py-3 text-sm text-text-secondary">{sensor.location}</td>
+                      <td className="px-3 py-3 text-sm text-text-secondary">{sensor.warehouseName ?? '미지정'}</td>
                       <td className="px-3 py-3 text-sm text-text-secondary">{sensor.sensorType}</td>
                       <td className="px-3 py-3">
                         <span
@@ -912,6 +945,26 @@ export function EnvironmentPage() {
                 {CONTROLLER_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 text-sm text-text-secondary">
+              <span>창고</span>
+              <select
+                value={controllerForm.warehouseId ?? ''}
+                onChange={(event) =>
+                  setControllerForm((prev) => ({
+                    ...prev,
+                    warehouseId: event.target.value === '' ? null : Number(event.target.value),
+                  }))
+                }
+                className="rounded-lg border border-neutral-200 px-3 py-2 text-text-primary outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+              >
+                <option value="">창고 선택</option>
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
                   </option>
                 ))}
               </select>
