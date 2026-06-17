@@ -21,11 +21,14 @@ interface AssistantResponse {
   answer: string
   sessionId: string
   actionSuggested: boolean
+  notice?: string | null
+  sessionReset?: boolean
 }
 
 export async function sendChatMessage(request: AiChatRequest): Promise<AiChatResponse> {
   const response = await api.post<AssistantResponse>('/v1/ai/bedrock/assistant', {
     message: request.message,
+    sessionId: request.sessionId,
     targetScopeType: request.scopeType,
     targetScopeId: request.scopeId,
   })
@@ -34,5 +37,8 @@ export async function sendChatMessage(request: AiChatRequest): Promise<AiChatRes
     provider: 'bedrock',
     serviceStatus: 'AVAILABLE',
     fallbackUsed: false,
+    sessionId: response.data.sessionId,
+    notice: response.data.notice ?? undefined,
+    sessionReset: response.data.sessionReset ?? false,
   }
 }
