@@ -86,11 +86,20 @@ function maskWebhookUrl(value?: string | null): string {
   }
 }
 
+/**
+ * Trusted host suffixes for Microsoft Teams incoming webhooks.
+ * - webhook.office.com: legacy Office 365 connector (deprecated by Microsoft, still functional)
+ * - logic.azure.com: Power Automate / Logic Apps "Workflows" webhook trigger
+ * - powerplatform.com: Power Platform managed-environment Workflows webhook
+ *   (e.g. *.environment.api.powerplatform.com), the current connector replacement
+ */
+const TEAMS_WEBHOOK_HOST_SUFFIXES = ['webhook.office.com', 'logic.azure.com', 'powerplatform.com']
+
 function isValidTeamsWebhookUrl(value: string): boolean {
   try {
     const url = new URL(value)
     if (url.protocol !== 'https:') return false
-    return url.hostname.endsWith('webhook.office.com') || url.hostname.endsWith('logic.azure.com')
+    return TEAMS_WEBHOOK_HOST_SUFFIXES.some((suffix) => url.hostname.endsWith(suffix))
   } catch {
     return false
   }
@@ -642,7 +651,7 @@ export function NotificationChannelPage() {
                     type="url"
                     value={formData.channels[0]?.webhookUrl ?? ''}
                     onChange={(e) => updateTeamsWebhookUrl(e.target.value)}
-                    placeholder="https://...webhook.office.com/..."
+                    placeholder="https://...webhook.office.com/... 또는 Workflows(...powerplatform.com/...)"
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     autoComplete="off"
                   />

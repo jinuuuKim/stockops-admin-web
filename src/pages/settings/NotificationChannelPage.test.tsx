@@ -210,6 +210,30 @@ describe('NotificationChannelPage', () => {
     })
   })
 
+  it('accepts a Power Automate (Workflows) Teams webhook URL', async () => {
+    const powerAutomateUrl =
+      'https://default93985ad44ec64a22a4bd7a28a6294f.d5.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/2a374fd7acc2449dbe56c03384a35e45/triggers/manual/paths/invoke?api-version=1'
+
+    render(<NotificationChannelPage />)
+    selectCenter()
+    fireEvent.click(screen.getByRole('button', { name: '새 Teams 설정' }))
+
+    fireEvent.change(screen.getByLabelText(/Teams webhook URL/), {
+      target: { value: powerAutomateUrl },
+    })
+    fireEvent.submit(screen.getByRole('form', { name: '새 Teams 채널 설정 폼' }))
+
+    await waitFor(() => {
+      expect(createMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          channels: [
+            expect.objectContaining({ webhookProvider: 'TEAMS', webhookUrl: powerAutomateUrl }),
+          ],
+        }),
+      )
+    })
+  })
+
   it('blocks invalid Teams webhook URLs', async () => {
     render(<NotificationChannelPage />)
     selectCenter()
