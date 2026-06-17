@@ -152,7 +152,7 @@ function GeneralSettings() {
     )
   }
 
-  const aiEnabledCount = [settings.bedrockEnabled, settings.vertexEnabled, settings.geminiEnabled].filter(Boolean).length
+  const aiEnabledCount = [settings.bedrockEnabled, settings.vertexEnabled].filter(Boolean).length
 
   return (
     <div className="space-y-6">
@@ -202,7 +202,6 @@ function GeneralSettings() {
           {[
             { label: 'AWS Bedrock', enabled: settings.bedrockEnabled },
             { label: 'Vertex AI', enabled: settings.vertexEnabled },
-            { label: 'Gemini', enabled: settings.geminiEnabled },
           ].map(({ label, enabled }) => (
             <span
               key={label}
@@ -803,35 +802,6 @@ function ApiSettings() {
                   <span className="text-text-secondary">서비스 계정: </span>
                   <span className={`font-medium ${integrations.vertex.hasCredentials ? 'text-green-700' : 'text-amber-600'}`}>
                     {integrations.vertex.hasCredentials ? '설정됨' : '미설정 (STOCKOPS_VERTEX_AI_CREDENTIALS_JSON 환경변수 필요)'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className={`rounded-lg border p-4 ${integrations.gemini.enabled ? 'border-green-200 bg-green-50' : 'border-neutral-200 bg-neutral-50'}`}>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Bot className={`h-5 w-5 ${integrations.gemini.enabled ? 'text-green-600' : 'text-neutral-400'}`} />
-                <div>
-                  <p className="font-medium text-text-primary">Google Gemini</p>
-                  <p className="text-xs text-text-secondary mt-0.5">API 키 인증</p>
-                </div>
-              </div>
-              <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${integrations.gemini.enabled ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-500'}`}>
-                {integrations.gemini.enabled ? '활성' : '비활성'}
-              </span>
-            </div>
-            {integrations.gemini.enabled && (
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm border-t border-green-200 pt-3">
-                <div>
-                  <span className="text-text-secondary">모델: </span>
-                  <span className="font-medium text-text-primary">{integrations.gemini.modelName || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-text-secondary">API 키: </span>
-                  <span className={`font-medium ${integrations.gemini.hasApiKey ? 'text-green-700' : 'text-amber-600'}`}>
-                    {integrations.gemini.hasApiKey ? '설정됨' : '미설정 (GEMINI_API_KEY 환경변수 필요)'}
                   </span>
                 </div>
               </div>

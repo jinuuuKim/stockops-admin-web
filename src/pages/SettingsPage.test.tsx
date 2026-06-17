@@ -106,7 +106,6 @@ function buildGeneralSettings() {
     purchaseOrderCount: 57,
     bedrockEnabled: true,
     vertexEnabled: false,
-    geminiEnabled: false,
     businessZone: 'Asia/Seoul',
     activeProfile: 'prod',
   }
