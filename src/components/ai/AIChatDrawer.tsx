@@ -55,7 +55,7 @@ export function AIChatDrawer() {
           )}
           <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
             {messages.map((message) => (
-              <div key={message.id} className={message.role === 'user' ? 'ml-auto max-w-[85%] rounded-lg bg-primary-600 px-3 py-2 text-sm text-white' : 'mr-auto max-w-[85%] rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-900'}>
+              <div key={message.id} className={message.role === 'user' ? 'ml-auto max-w-[85%] whitespace-pre-wrap break-words rounded-lg bg-primary-600 px-3 py-2 text-sm text-white' : 'mr-auto max-w-[85%] whitespace-pre-wrap break-words rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-900'}>
                 {message.content}
               </div>
             ))}
