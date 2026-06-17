@@ -6,7 +6,6 @@ export interface SystemGeneralSettings {
   purchaseOrderCount: number
   bedrockEnabled: boolean
   vertexEnabled: boolean
-  geminiEnabled: boolean
   businessZone: string
   activeProfile: string
 }
@@ -26,14 +25,7 @@ export interface VertexIntegration {
   hasCredentials: boolean
 }
 
-export interface GeminiIntegration {
-  enabled: boolean
-  modelName: string
-  hasApiKey: boolean
-}
-
 export interface SystemIntegrations {
   bedrock: BedrockIntegration
   vertex: VertexIntegration
-  gemini: GeminiIntegration
 }

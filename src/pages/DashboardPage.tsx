@@ -270,12 +270,12 @@ export function DashboardPage() {
               actionLabel="확인하기"
               onAction={() => {}}
             />
-            {summary?.lowStockCount && summary.lowStockCount > 0 && (
+            {(summary?.lowStockCount ?? 0) > 0 && (
               <AlertItem
                 type="warning"
                 icon="📉"
                 title="재고 부족"
-                message={`${summary.lowStockCount}개 품목의 재고가 안전재고 이하입니다`}
+                message={`${summary?.lowStockCount}개 품목의 재고가 안전재고 이하입니다`}
                 timestamp="1시간 전"
                 actionLabel="확인하기"
                 onAction={() => {}}
