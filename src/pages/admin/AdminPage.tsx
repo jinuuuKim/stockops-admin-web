@@ -1,4 +1,5 @@
-import { Activity, AlertTriangle, Bell, CheckCircle2, ClipboardList, Package, RefreshCw, Users } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowRight, Bell, CheckCircle2, ClipboardList, Package, RefreshCw, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import {
   useActiveAdminNotices,
   useAdminDashboardSummary,
@@ -220,6 +221,15 @@ export function AdminPage() {
               ))}
             </div>
           )}
+          {recentAuditLogs.length > 0 && (
+            <Link
+              to="/admin/audit-logs"
+              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
+            >
+              전체 감사 로그 보기
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </section>
 
         <section className="rounded-xl border border-neutral-200 bg-white p-6">
@@ -245,6 +255,15 @@ export function AdminPage() {
                 </article>
               ))}
             </div>
+          )}
+          {activeNotices.length > 0 && (
+            <Link
+              to="/admin/notices"
+              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
+            >
+              공지 전체 관리
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           )}
         </section>
       </div>

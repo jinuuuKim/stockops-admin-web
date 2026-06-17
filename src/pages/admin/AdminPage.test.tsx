@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { AdminPage } from './AdminPage'
 import type { AdminNotice, AuditLog, AdminStats } from '@/types/admin'
 import type { DashboardSummary } from '@/types/dashboard'
@@ -140,7 +141,7 @@ describe('AdminPage', () => {
   })
 
   it('renders real dashboard metrics from contracted API hooks without placeholder widgets', () => {
-    render(<AdminPage />)
+    render(<MemoryRouter><AdminPage /></MemoryRouter>)
 
     expect(within(screen.getByLabelText('전체 사용자')).getByText('42')).toBeInTheDocument()
     expect(within(screen.getByLabelText('등록 상품')).getByText('1,240')).toBeInTheDocument()
@@ -167,7 +168,7 @@ describe('AdminPage', () => {
       teams: { data: undefined, isLoading: true },
     })
 
-    render(<AdminPage />)
+    render(<MemoryRouter><AdminPage /></MemoryRouter>)
 
     expect(screen.getByText('대시보드 데이터를 불러오는 중입니다.')).toBeInTheDocument()
     expect(screen.getByText('감사 로그를 불러오는 중입니다.')).toBeInTheDocument()
@@ -182,7 +183,7 @@ describe('AdminPage', () => {
       teams: { data: [] },
     })
 
-    render(<AdminPage />)
+    render(<MemoryRouter><AdminPage /></MemoryRouter>)
 
     expect(screen.getByText('활성화된 공지가 없습니다.')).toBeInTheDocument()
     expect(screen.getByText(/대체 로그나 샘플 이벤트는 표시하지 않습니다/)).toBeInTheDocument()
@@ -199,7 +200,7 @@ describe('AdminPage', () => {
       teams: { data: undefined, isError: true, error: new Error('teams failed') },
     })
 
-    render(<AdminPage />)
+    render(<MemoryRouter><AdminPage /></MemoryRouter>)
 
     expect(screen.getByText(/일부 운영 데이터를 불러오지 못했습니다/)).toBeInTheDocument()
     expect(screen.getByText('최근 감사 로그를 불러오지 못했습니다.')).toBeInTheDocument()
