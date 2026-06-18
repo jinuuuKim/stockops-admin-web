@@ -25,13 +25,22 @@ interface AssistantResponse {
   sessionReset?: boolean
 }
 
+/**
+ * The assistant runs a multi-step LLM + tool-use loop (KB retrieval, forecast tools, etc.),
+ * which is far slower than a typical CRUD call and regularly approaches/exceeds the shared
+ * 30s axios default — so this call overrides it with a longer per-request timeout.
+ * NOTE: the admin-web nginx `/api` proxy uses the default 60s `proxy_read_timeout`, so backend
+ * responses beyond ~60s still need an infra-side timeout bump to be delivered.
+ */
+const ASSISTANT_TIMEOUT_MS = 120000
+
 export async function sendChatMessage(request: AiChatRequest): Promise<AiChatResponse> {
   const response = await api.post<AssistantResponse>('/v1/ai/bedrock/assistant', {
     message: request.message,
     sessionId: request.sessionId,
     targetScopeType: request.scopeType,
     targetScopeId: request.scopeId,
-  })
+  }, { timeout: ASSISTANT_TIMEOUT_MS })
   return {
     message: response.data.answer,
     provider: 'bedrock',
