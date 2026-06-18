@@ -1,22 +1,22 @@
 /**
  * API client for AI chat messages.
  *
- * Targets the Converse tool-use assistant (`/v1/ai/bedrock/assistant`), which applies the
- * StockOps-domain Guardrail, the scope-limiting system prompt, and Knowledge Base grounding.
- * The legacy `/v1/ai/chat/messages` endpoint had none of these (it answered off-domain
- * questions freely), so the chat UI was migrated here. The assistant's response is adapted to
- * the existing {@link AiChatResponse} shape so callers (AiChatPage, useAIChatSession) stay
- * unchanged. The assistant path returns errors as answer text rather than HTTP errors, so the
- * provider/fallback notice fields are not populated.
+ * Targets the Converse tool-use assistant, which applies the StockOps-domain Guardrail, the
+ * scope-limiting system prompt, and Knowledge Base grounding.
+ *
+ * The assistant runs a multi-step LLM + tool-use loop that can take far longer than a normal
+ * request, so the call is split into an async job: POST creates the job and returns a jobId
+ * immediately, then we poll until it completes. This keeps every individual request short, so it
+ * no longer fights the axios timeout or any CDN/load-balancer read timeout on slow turns.
  *
  * @author StockOps Team
- * @since 2.1
+ * @since 2.7
  */
 
 import api from '@/lib/api'
 import type { AiChatRequest, AiChatResponse } from '@/types/aiChat'
 
-/** Backend BedrockAgentInvokeResponse shape returned by the assistant endpoint. */
+/** Backend BedrockAgentInvokeResponse shape (the assistant result). */
 interface AssistantResponse {
   answer: string
   sessionId: string
@@ -25,20 +25,56 @@ interface AssistantResponse {
   sessionReset?: boolean
 }
 
+interface AssistantJobCreated {
+  jobId: string
+}
+
+interface AssistantJobStatus {
+  jobId: string
+  status: 'PENDING' | 'DONE' | 'ERROR'
+  result?: AssistantResponse | null
+  error?: string | null
+}
+
+/** Interval between status polls. */
+const POLL_INTERVAL_MS = 1200
+/** Hard ceiling on polling (≈ MAX_POLLS × interval) so a stuck job can't poll forever. */
+const MAX_POLLS = 150
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function adapt(result: AssistantResponse): AiChatResponse {
+  return {
+    message: result.answer,
+    provider: 'bedrock',
+    serviceStatus: 'AVAILABLE',
+    fallbackUsed: false,
+    sessionId: result.sessionId,
+    notice: result.notice ?? undefined,
+    sessionReset: result.sessionReset ?? false,
+  }
+}
+
 export async function sendChatMessage(request: AiChatRequest): Promise<AiChatResponse> {
-  const response = await api.post<AssistantResponse>('/v1/ai/bedrock/assistant', {
+  const created = await api.post<AssistantJobCreated>('/v1/ai/bedrock/assistant/jobs', {
     message: request.message,
     sessionId: request.sessionId,
     targetScopeType: request.scopeType,
     targetScopeId: request.scopeId,
   })
-  return {
-    message: response.data.answer,
-    provider: 'bedrock',
-    serviceStatus: 'AVAILABLE',
-    fallbackUsed: false,
-    sessionId: response.data.sessionId,
-    notice: response.data.notice ?? undefined,
-    sessionReset: response.data.sessionReset ?? false,
+  const { jobId } = created.data
+
+  for (let attempt = 0; attempt < MAX_POLLS; attempt += 1) {
+    const { data } = await api.get<AssistantJobStatus>(`/v1/ai/bedrock/assistant/jobs/${jobId}`)
+    if (data.status === 'DONE' && data.result) {
+      return adapt(data.result)
+    }
+    if (data.status === 'ERROR') {
+      throw new Error(data.error || 'assistant job failed')
+    }
+    await delay(POLL_INTERVAL_MS)
   }
+  throw new Error('assistant job timed out')
 }

@@ -59,7 +59,19 @@ export function AIChatDrawer() {
                 {message.content}
               </div>
             ))}
-            {messages.length === 0 && <p className="py-8 text-center text-sm text-neutral-500">운영 현황이나 재고 이슈를 질문해보세요.</p>}
+            {messages.length === 0 && !isSending && <p className="py-8 text-center text-sm text-neutral-500">운영 현황이나 재고 이슈를 질문해보세요.</p>}
+            {isSending && (
+              <div
+                className="mr-auto flex max-w-[85%] items-center gap-1.5 rounded-lg bg-neutral-100 px-3 py-2.5"
+                role="status"
+                aria-label="응답 생성 중"
+              >
+                <span className="h-2 w-2 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.3s]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-neutral-400" />
+                <span className="sr-only">응답 생성 중…</span>
+              </div>
+            )}
           </div>
           <form
             className="flex items-center gap-2 border-t border-neutral-200 p-3"
@@ -69,10 +81,11 @@ export function AIChatDrawer() {
             }}
           >
             <input
-              className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-400"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="질문 입력"
+              placeholder={isSending ? '응답을 기다리는 중…' : '질문 입력'}
+              disabled={isSending}
             />
             <button type="submit" className="rounded bg-primary-600 p-2 text-white disabled:opacity-50" disabled={isSending} aria-label="메시지 보내기">
               <Send className="h-4 w-4" />
