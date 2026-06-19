@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import { Bell, Check, TriangleAlert, Info, PackageCheck } from 'lucide-react'
+import { Bell, Check, TriangleAlert, Info, PackageCheck, Thermometer } from 'lucide-react'
 import { useNotifications, useUnreadNotificationCount, useMarkAsRead, useMarkAllAsRead } from '@/hooks/useNotification'
 import type { NotificationType } from '@/types/notification'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -145,6 +145,8 @@ function getNotificationIcon(type: NotificationType) {
       return <Info className="w-5 h-5" />
     case 'PURCHASE_ORDER_STATUS_CHANGED':
       return <PackageCheck className="w-5 h-5" />
+    case 'ENVIRONMENT_ALERT':
+      return <Thermometer className="w-5 h-5" />
     default:
       return <Bell className="w-5 h-5" />
   }
@@ -158,6 +160,8 @@ function getNotificationColorClass(type: NotificationType): string {
       return 'text-rose-600 bg-rose-50'
     case 'PURCHASE_ORDER_STATUS_CHANGED':
       return 'text-emerald-600 bg-emerald-50'
+    case 'ENVIRONMENT_ALERT':
+      return 'text-red-600 bg-red-50'
     default:
       return 'text-primary-600 bg-primary-50'
   }

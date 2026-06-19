@@ -235,7 +235,7 @@ export function MainLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 p-4 overflow-y-auto sidebar-scroll">
           {getNavItemsForRole(user?.role).map((item) => {
             const isActive = location.pathname === item.to
             return (
