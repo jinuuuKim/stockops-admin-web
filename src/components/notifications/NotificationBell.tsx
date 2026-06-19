@@ -13,6 +13,7 @@ import {
   Check,
   Info,
   PackageCheck,
+  Thermometer,
   TriangleAlert,
 } from 'lucide-react'
 import {
@@ -320,6 +321,8 @@ function renderNotificationIcon(type: NotificationType) {
       return <PackageCheck className="w-4 h-4" />
     case 'STOCK_CHANGE':
       return <PackageCheck className="w-4 h-4" />
+    case 'ENVIRONMENT_ALERT':
+      return <Thermometer className="w-4 h-4" />
     default:
       return <Bell className="w-4 h-4" />
   }
@@ -335,6 +338,8 @@ function getNotificationAccentClass(type: NotificationType): string {
       return 'text-emerald-600'
     case 'STOCK_CHANGE':
       return 'text-emerald-600'
+    case 'ENVIRONMENT_ALERT':
+      return 'text-red-600'
     default:
       return 'text-primary-600'
   }
